@@ -1,0 +1,60 @@
+# Netlify configuration for the NC Insights static website.
+# The build uses only Node.js built-in modules — there are no npm dependencies to install.
+
+[build]
+  command = "npm run build && npm run check"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Set NC_PRODUCTION = "true" in Netlify (Site configuration → Environment variables)
+  # once the launch settings in src/data/site.mjs are complete. Until then pages are
+  # published with noindex and robots.txt disallows crawling. See README.md.
+
+# The previous sample-package URLs now live under seasonal codes.
+[[redirects]]
+  from = "/tour-packages/meghalaya-explorer/*"
+  to = "/tour-packages/summer-ef-07/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tour-packages/assam-wildlife-culture/*"
+  to = "/tour-packages/winter-ef-14/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tour-packages/arunachal-scenic-circuit/*"
+  to = "/tour-packages/summer-ef-12/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tour-packages/complete-northeast-escape/*"
+  to = "/tour-packages/winter-ef-17/"
+  status = 301
+  force = true
+
+# Security headers are generated into dist/_headers by the build.
+# Caching: file names are not fingerprinted, so images get a week and fonts a year.
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

@@ -1,4 +1,13 @@
+# Build output (Netlify builds this from source)
 dist/
 output/
+
+# Dependencies and tooling
 node_modules/
+.netlify/
 .playwright-cli/
+.claude/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db

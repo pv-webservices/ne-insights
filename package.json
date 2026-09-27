@@ -9,7 +9,10 @@
     "build:production": "node scripts/build.mjs --production",
     "dev": "node scripts/serve.mjs",
     "preview": "node scripts/serve.mjs",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "netlify": "npm run build && npm run check"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

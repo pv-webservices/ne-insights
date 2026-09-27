@@ -6,7 +6,8 @@ import {packageAliases} from '../src/data/packages.mjs';
 import {esc,header,footer,pageHero,breadcrumbs} from '../src/components/ui.mjs';
 import * as pages from '../src/pages.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const production = process.argv.includes('--production');
+// Production mode: `--production` flag, or NC_PRODUCTION=true (e.g. a Netlify environment variable).
+const production = process.argv.includes('--production') || process.env.NC_PRODUCTION === 'true';
 if(production){
   const missing=[];
   if(!/^https:\/\/[^/]+/.test(site.url))missing.push('HTTPS site.url or SITE_URL');
@@ -18,7 +19,7 @@ if(production){
 const base = (site.url || 'http://localhost:4321').replace(/\/$/,'');
 const routes=[];
 const add=(url,title,description,body,img='hero',schema=null)=>routes.push({url,title,description,body,img,schema});
-add('/','Northeast India, Your Way','Explore Northeast India with NC Insights: custom tour packages, chauffeur-driven car rentals, handpicked stays and wildlife safari planning.',pages.home());
+add('/','Northeast India, Your Way','Explore Northeast India with NC Insights: custom tour packages, chauffeur-driven car rentals, handpicked stays and wildlife safari planning.',pages.home(),'hero-journey');
 add('/destinations/','Explore Northeast India Destinations','Explore eight distinctive states: Assam, Meghalaya, Arunachal Pradesh, Sikkim, Nagaland, Manipur, Mizoram and Tripura.',pages.destinationDirectory(),'meghalaya');
 for(const d of destinations)add(`/destinations/${d.slug}/`,`${d.name} Travel Guide & Custom Tours`,d.intro,pages.destinationPage(d),d.image,{'@type':'TouristDestination',name:d.name,description:d.intro});
 add('/tour-packages/','Domestic Summer & Winter Tour Packages','Explore 14 summer and 17 winter Northeast India itineraries. Filter by season, destination, travel style and duration.',pages.packagesPage(),'meghalaya');
@@ -43,7 +44,7 @@ add('/404.html','Page Not Found','The page you requested could not be found. Ret
 
 await mkdir(path.join(root,'dist'),{recursive:true});
 await mkdir(path.join(root,'output'),{recursive:true});
-await cp(path.join(root,'public'),path.join(root,'dist'),{recursive:true,filter:source=>!(/\.(jpg|docx)$/i.test(source))});
+await cp(path.join(root,'public'),path.join(root,'dist'),{recursive:true,filter:source=>!(/\.(jpe?g|png|docx)$/i.test(source))});
 await cp(path.join(root,'src/styles/main.css'),path.join(root,'dist/main.css'));
 for(const route of routes){
  const canonical=base+route.url;

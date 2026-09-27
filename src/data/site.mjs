@@ -1,6 +1,7 @@
 export const site = {
   name: 'NC Insights',
-  url: process.env.SITE_URL || '',
+  // SITE_URL wins; on Netlify fall back to its production URL or the deploy-preview URL.
+  url: process.env.SITE_URL || (process.env.CONTEXT === 'production' ? process.env.URL : process.env.DEPLOY_PRIME_URL) || '',
   phone: '+91 8473833199',
   email: 'operations.neinsights@gmail.com',
   // International digits only (no + or spaces), used for wa.me links.

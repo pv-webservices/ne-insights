@@ -43,7 +43,25 @@ npm run check
 
 The production build checks these settings. Preview builds intentionally use `noindex` and disallow crawling. Once configured, the production build creates absolute canonical/Open Graph URLs, an absolute sitemap, and crawlable robots rules. Do not deploy preview output as the public release.
 
-Upload the **contents** of `dist/` to the hosting document root. The site uses root-relative URLs and expects a root-domain deployment. On Hostinger/Apache, the generated `.htaccess` configures `404.html`. Netlify and Cloudflare Pages serve the static output directly; verify the host's custom 404 handling. For GitHub Pages, use a custom domain or adapt root-relative paths for a repository subpath. No deployment has been performed.
+### Deploying on Netlify (GitHub)
+
+There are **no npm dependencies** — the build uses only Node.js built-ins, so Netlify's install step has nothing to fetch. Everything Netlify needs is in the repo:
+
+- `netlify.toml`: build command `npm run build && npm run check`, publish directory `dist`, Node 22, 301 redirects for the four legacy package URLs, and cache headers for images and fonts.
+- `.nvmrc`: Node 22 for local work.
+- The build writes `dist/_headers` (security headers). Netlify serves `dist/404.html` for missing pages automatically.
+
+Steps:
+
+1. Push this folder to a GitHub repository (`dist/` and `output/` are git-ignored; Netlify builds them).
+2. In Netlify: **Add new site → Import an existing project → GitHub**, pick the repo. The build settings are read from `netlify.toml`; leave the fields as detected.
+3. Deploy. Page canonical/Open Graph URLs and the sitemap automatically use Netlify's site URL (`URL`, or `DEPLOY_PRIME_URL` on deploy previews). Set a `SITE_URL` environment variable once a custom domain is connected.
+
+**Search indexing is off by default.** Until the launch settings are complete, every page ships with `noindex` and `robots.txt` disallows crawling. To go live for search engines, fill in `address`, `hours` and `legalApproved: true` in `src/data/site.mjs`, then add the environment variable `NC_PRODUCTION=true` in Netlify and redeploy. If anything is still missing, the Netlify build fails with a message listing it and the previous deploy stays live.
+
+The source Word documents, the reference screenshot and original JPEGs in `public/` are committed with the repo but excluded from the published site. If the GitHub repository is public, those files are visible there; use a private repository if that matters.
+
+Other hosts: upload the **contents** of `dist/` to the document root. On Hostinger/Apache the generated `.htaccess` configures `404.html`.
 
 ## Enquiries
 
