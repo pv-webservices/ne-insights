@@ -20,4 +20,4 @@ http.createServer(async(req,res)=>{
   res.writeHead(status,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'});
   res.end(data);
  }catch{res.writeHead(400);res.end('Bad request');}
-}).listen(port,'127.0.0.1',()=>console.log(`NC Insights preview: http://localhost:${port}`));
+}).listen(port,'127.0.0.1',()=>console.log(`NE Insights preview: http://localhost:${port}`));

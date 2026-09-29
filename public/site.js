@@ -267,7 +267,7 @@ document.querySelectorAll('[data-enquiry]').forEach(form => {
     const data = new FormData(form);
     if (data.get('website')) return;
     const labels = { name:'Name', phone:'Phone', email:'Email', city:'Starting city', date:'Preferred date', duration:'Trip duration (days)', adults:'Adults / travellers', children:'Children', destinations:'Preferred destinations', services:'Services', style:'Travel style', budget:'Budget preference', requirements:'Special requirements', message:'Message' };
-    const rows = ['NC INSIGHTS — TRAVEL ENQUIRY', '', ...Object.entries(labels).flatMap(([key, label]) => {
+    const rows = ['NE INSIGHTS — TRAVEL ENQUIRY', '', ...Object.entries(labels).flatMap(([key, label]) => {
       const values = data.getAll(key).map(value => String(value).trim()).filter(Boolean);
       return values.length ? [`${label}: ${values.join(', ')}`] : [];
     }), '', 'This is an enquiry, not a confirmed booking.'];
@@ -287,7 +287,7 @@ document.querySelectorAll('[data-enquiry]').forEach(form => {
       feedback.querySelector('[data-feedback-message]').textContent = 'Your enquiry has not been sent. Review the details, then open your email or WhatsApp app to send it. You can also download a copy.';
     } else {
       send.hidden = true;
-      feedback.querySelector('[data-feedback-message]').textContent = 'Your details have not been sent. Business contact details are still being added. Download this summary to keep your plans, then contact NC Insights once its contact information is available.';
+      feedback.querySelector('[data-feedback-message]').textContent = 'Your details have not been sent. Business contact details are still being added. Download this summary to keep your plans, then contact NE Insights once its contact information is available.';
     }
     feedback.hidden = false;
     feedback.focus({preventScroll:true});

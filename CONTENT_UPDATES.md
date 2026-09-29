@@ -1,3 +1,30 @@
+# Client revisions — 30 September 2026
+
+- **Brand:** the site now uses **NE Insights** everywhere (titles, metadata, headings, forms, enquiry summaries and every prefilled WhatsApp greeting). "Why travel with NC Insights" is now "Why travel with NE Insights".
+- **Sikkim removed:** destination page, menus, footer, enquiry-form checkbox, FAQ, homepage imagery and its photo credit. The site now covers seven states. `sikkim.webp/.jpg` were deleted.
+- **Package codes:** `EF-xx` is now `NE-xx` (for example Summer NE-07). URLs changed from `/tour-packages/summer-ef-07/` to `/tour-packages/summer-ne-07/`; every former EF URL gets a static redirect page, and the four legacy sample-package redirects in `netlify.toml` point at the new URLs.
+- **Fleet:** Premium SUV removed (`fleet-premium.webp` deleted). Tempo Traveller capacity is now **7–20 guests** on the fleet cards, car-rental page, FAQ and every package page.
+- **TOAA:** the "Associate Member — Tour Operators Association of Assam" badge (`public/images/toaa.webp`) appears in the footer on every page, in the homepage "Why travel with NE Insights" section and on the About page.
+- **New Signature collection** (`/tour-packages/signature/`) from the five documents in `public/itinrerary/`:
+
+| Code | Package | Duration | Route | Source |
+| --- | --- | --- | --- | --- |
+| Signature NE-01 | Imphal & Loktak Lake Extension | 2N / 3D | Kohima → 2N Imphal | `MANIPUR.docx` |
+| Signature NE-02 | Kaziranga, Sivasagar & Hajo Heritage Trail | 4N / 5D | 1N Kaziranga · 1N Sivasagar · 2N Guwahati | `4N 5D sivsagar and hajo.docx` |
+| Signature NE-03 | Shillong Cherry Blossom Special | 5N / 6D | 4N Shillong · 1N Cherrapunjee | `Cherry blossom  shillong.docx` |
+| Signature NE-04 | Meghalaya, Kaziranga, Nagaland & Manipur | 9N / 10D | 3N Shillong · 1N Kaziranga · 3N Kohima · 2N Imphal | `shillong kohima imphal 10d.docx` |
+| Signature NE-05 | Arunachal, Mizoram & Tripura Grand Tour | 11N / 12D | Tezpur/Bhalukpong · Dirang · 2N Tawang · Bomdila · Guwahati · 2N Aizawl · 3N Agartala | `Arunachal,Mizoram,Tripura ITINERARY.docx` |
+
+Notes on the new itineraries:
+
+- The Sivasagar/Hajo document is headed "Greeting from Vedanshi Travels"; that branding was not carried over.
+- NE-01 starts in Kohima and NE-04/NE-05 end outside Guwahati, so package pages now show separate start and end points.
+- Nagaland, Manipur and Mizoram routes carry an entry-permit (Inner Line Permit) note; routes with internal flights say flights are not included unless quoted.
+- Cherry blossom dates are set by the festival organisers each year, so the page asks travellers to plan around the confirmed schedule rather than stating fixed dates.
+- The source folder is spelt `itinrerary`; it was left as supplied. The `.docx` files are excluded from the published site.
+
+Build after these changes: **62 static HTML pages**, `npm run check` PASS.
+
 # Domestic itinerary update — 28 September 2026
 
 ## Source documents

@@ -1,4 +1,4 @@
-# NC Insights
+# NE Insights
 
 A static, multi-page Northeast India travel website. The supplied homepage image informed the layout and branding. The tabbed booking/search panel is deliberately omitted.
 
@@ -21,8 +21,8 @@ The output is ordinary HTML, CSS, vanilla JavaScript, SVG, WebP and WOFF2 files 
 
 ## Content and design
 
-- `src/data/site.mjs`: verified business settings, eight destinations, services, vehicle categories and FAQs.
-- `src/data/packages.mjs`: 14 summer and 17 winter itineraries, based on the client Word documents, with season-specific EF codes.
+- `src/data/site.mjs`: verified business settings, seven destinations, services, vehicle categories and FAQs.
+- `src/data/packages.mjs`: 14 summer, 17 winter and 5 signature itineraries, based on the client Word documents (`public/*.docx` and `public/itinrerary/`), with collection-specific NE codes.
 - `src/package-pages.mjs`: collection pages, filters, hotel guidance and package detail templates.
 - `src/pages.mjs`: static page templates.
 - `src/components/ui.mjs`: shared header, footer, cards and hero/section building blocks.
@@ -47,7 +47,7 @@ The production build checks these settings. Preview builds intentionally use `no
 
 There are **no npm dependencies** — the build uses only Node.js built-ins, so Netlify's install step has nothing to fetch. Everything Netlify needs is in the repo:
 
-- `netlify.toml`: build command `npm run build && npm run check`, publish directory `dist`, Node 22, 301 redirects for the four legacy package URLs, and cache headers for images and fonts.
+- `netlify.toml`: build command `npm run build && npm run check`, publish directory `dist`, Node 22, 301 redirects for the four legacy sample-package URLs (former EF-coded package URLs get static redirect pages from the build), and cache headers for images and fonts.
 - `.nvmrc`: Node 22 for local work.
 - The build writes `dist/_headers` (security headers). Netlify serves `dist/404.html` for missing pages automatically.
 
@@ -71,7 +71,7 @@ For long enquiries, downloading the summary is the dependable fallback if the de
 
 ## Assets
 
-Fonts and images are served locally. Regional photos are from Wikimedia Commons with attribution and licences in `/image-credits/`. The original NC Insights logo (`public/website-logo.jpeg`) is served as `images/logo.webp`. Eight illustrative images were AI-generated (Google Nano Banana 2, 1k) and converted to WebP: `hero-journey`, `wild-tiger`, `traveller` (each with a `-small` variant), `mizoram-hills`, `loktak`, `village-walk`, `homestay` and the four `fleet-*` vehicle category photos; the credits page says so. Original JPEG source assets are kept for reference but excluded from the output. There are no videos on the site.
+Fonts and images are served locally. Regional photos are from Wikimedia Commons with attribution and licences in `/image-credits/`. The original NE Insights logo (`public/website-logo.jpeg`) is served as `images/logo.webp`. Several illustrative images were AI-generated (Google Nano Banana 2, 1k) and converted to WebP: `hero-journey`, `wild-tiger`, `traveller` (each with a `-small` variant), `mizoram-hills`, `loktak`, `village-walk`, `homestay` and the `fleet-*` vehicle category photos. The TOAA association logo (`toaa.webp`) is supplied by the business to show associate membership; the credits page says so. Original JPEG source assets are kept for reference but excluded from the output. There are no videos on the site.
 
 Local preview requires no network connection after checkout. Font licence files are included in `public/fonts/`.
 

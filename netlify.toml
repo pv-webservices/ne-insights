@@ -1,4 +1,4 @@
-# Netlify configuration for the NC Insights static website.
+# Netlify configuration for the NE Insights static website.
 # The build uses only Node.js built-in modules — there are no npm dependencies to install.
 
 [build]
@@ -14,25 +14,25 @@
 # The previous sample-package URLs now live under seasonal codes.
 [[redirects]]
   from = "/tour-packages/meghalaya-explorer/*"
-  to = "/tour-packages/summer-ef-07/"
+  to = "/tour-packages/summer-ne-07/"
   status = 301
   force = true
 
 [[redirects]]
   from = "/tour-packages/assam-wildlife-culture/*"
-  to = "/tour-packages/winter-ef-14/"
+  to = "/tour-packages/winter-ne-14/"
   status = 301
   force = true
 
 [[redirects]]
   from = "/tour-packages/arunachal-scenic-circuit/*"
-  to = "/tour-packages/summer-ef-12/"
+  to = "/tour-packages/summer-ne-12/"
   status = 301
   force = true
 
 [[redirects]]
   from = "/tour-packages/complete-northeast-escape/*"
-  to = "/tour-packages/winter-ef-17/"
+  to = "/tour-packages/winter-ne-17/"
   status = 301
   force = true
 

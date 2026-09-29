@@ -1,9 +1,9 @@
 {
-  "name": "nc-insights",
+  "name": "ne-insights",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "NC Insights static multi-page travel website",
+  "description": "NE Insights static multi-page travel website",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:production": "node scripts/build.mjs --production",
