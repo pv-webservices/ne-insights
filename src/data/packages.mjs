@@ -27,7 +27,7 @@ const kazirangaTransfer = day('Shillong → Kaziranga', 'Drive from Shillong to 
 const kazirangaSafari = day('Kaziranga wildlife & local life', 'The itinerary plans an early elephant ride followed by breakfast and a jeep safari in the Central or Western Range. In the afternoon, visit a local village, view a tea garden from outside and explore the Orchid and Biodiversity Park. Safari timings, ranges and rides are subject to park arrangements; sightings are not guaranteed.', 'Kaziranga');
 const kazirangaGuwahati = day('Kaziranga → Guwahati', 'Drive to Guwahati, then visit Kamakhya Temple and Assam State Museum if their schedules allow. An evening Brahmaputra cruise is optional, on direct payment and subject to availability and water level.', 'Guwahati');
 
-// Signature-collection days, edited from the itinerary documents in public/itinrerary/.
+// Signature-collection days, edited from the itinerary documents in source-files/documents/itineraries/.
 const sohraLunch = day('Shillong → Cherrapunjee → Shillong', 'Set off early for Cherrapunjee (Sohra), stopping at the Duwan Sing Syiem viewpoint. Visit Seven Sisters Falls and Nohkalikai Falls and walk through Mawsmai Cave. Have lunch in Cherrapunjee before driving back to Shillong.', 'Shillong');
 const kohimaImphal = day('Kohima → Imphal', 'Check out after breakfast and drive to Imphal. In the afternoon, visit the Manipur State Museum for the history, cultures and natural heritage of the state, then join the evening aarti at Shree Govindajee Temple. Sightseeing depends on your arrival time in Imphal.', 'Imphal');
 const loktakDay = day('Keibul Lamjao & Loktak Lake', 'Start early for Keibul Lamjao National Park, the world’s only floating national park and home of the sangai, Manipur’s brow-antlered “dancing deer”. Before lunch, take a boat on Loktak Lake to see its floating islands, fishing life and birdlife, then walk by the lake and visit a small museum on one of its islands.', 'Imphal');
@@ -45,7 +45,7 @@ const STATE_ORDER = ['Assam','Meghalaya','Arunachal Pradesh','Nagaland','Manipur
 const statesFor = place => place==='Tezpur / Bhalukpong' ? ['Assam','Arunachal Pradesh'] : [STATE_OF[place]];
 
 export const collections = ['Summer','Winter','Signature'];
-const SOURCES = {Summer:'DOMESTIC SUMMER PACKAGE.docx', Winter:'Domestic Winter Package.docx'};
+const SOURCES = {Summer:'domestic-summer-package.docx', Winter:'domestic-winter-package.docx'};
 
 const make = (season, number, name, image, style, itinerary, highlights, intro, extras={}) => {
   const stays=[];
@@ -139,14 +139,14 @@ const winter=[
 ];
 
 const signature=[
-  make('Signature',1,'Imphal & Loktak Lake Extension','manipur','Culture',[kohimaImphal,loktakDay,imphalDepart],['Govindajee Temple evening aarti','Keibul Lamjao & the sangai deer','Boat ride on Loktak Lake'],'A short Manipur extension from Kohima, with Imphal’s heritage, the floating national park and a boat ride on Loktak Lake.',{start:'Kohima',end:'Imphal',source:'MANIPUR.docx'}),
+  make('Signature',1,'Imphal & Loktak Lake Extension','manipur','Culture',[kohimaImphal,loktakDay,imphalDepart],['Govindajee Temple evening aarti','Keibul Lamjao & the sangai deer','Boat ride on Loktak Lake'],'A short Manipur extension from Kohima, with Imphal’s heritage, the floating national park and a boat ride on Loktak Lake.',{start:'Kohima',end:'Imphal',source:'itineraries/manipur.docx'}),
   make('Signature',2,'Kaziranga, Sivasagar & Hajo Heritage Trail','assam','Culture',[
     day('Guwahati → Kaziranga','Meet at Guwahati airport or railway station and drive to Kaziranga National Park, home to the world’s largest population of greater one-horned rhinos. In the evening, enjoy an Assamese Bihu cultural performance, subject to the local programme.','Kaziranga'),
     day('Kaziranga → Sivasagar','Take an early jeep safari in the Central or Western Range, then return for breakfast and drive to Sivasagar, the former Ahom capital. Visit Rang Ghar, the royal amphitheatre; Talatal Ghar, the seven-storeyed Ahom palace; Kareng Ghar; and Joy Dol. Safari ranges and timings depend on park arrangements.','Sivasagar'),
     day('Sivasagar → Guwahati','Visit Shiva Dol and Vishnu Dol, two of Sivasagar’s landmark Ahom-era temples. After lunch, drive back to Guwahati.','Guwahati'),
     day('Kamakhya & Hajo','Visit Kamakhya Temple on Nilachal Hill early in the morning, then continue to Hajo, where Hindu, Buddhist and Islamic shrines share the same hills. Climb the steps to Hayagriva Madhava Temple and visit Poa Mecca, the revered shrine of Pir Giasuddin Auliya. Return to Guwahati in the evening.','Guwahati'),
     depart('Guwahati',false,true)
-  ],['Kaziranga jeep safari','Ahom palaces & temples of Sivasagar','Kamakhya, Hayagriva Madhava & Poa Mecca'],'Five days through Assam’s wildlife and history, from Kaziranga’s grasslands to the Ahom capital of Sivasagar and the multi-faith hills of Hajo.',{source:'4N 5D sivsagar and hajo.docx'}),
+  ],['Kaziranga jeep safari','Ahom palaces & temples of Sivasagar','Kamakhya, Hayagriva Madhava & Poa Mecca'],'Five days through Assam’s wildlife and history, from Kaziranga’s grasslands to the Ahom capital of Sivasagar and the multi-faith hills of Hajo.',{source:'itineraries/sivasagar-hajo-4n-5d.docx'}),
   make('Signature',3,'Shillong Cherry Blossom Special','meghalaya','Scenic',[
     day('Guwahati → Shillong','Meet at Guwahati airport and visit Kamakhya Temple, then drive to Shillong with a stop at Umiam Lake (Barapani), where kayaking and boating are optional. Visit the Cathedral of Mary if time permits.','Shillong'),
     day('Shillong city','Visit Shillong Peak and Elephant Falls, then return to the hotel for lunch and a rest. In the afternoon, see Lady Hydari Park and Ward’s Lake, with a walk around Police Bazaar.','Shillong'),
@@ -154,7 +154,7 @@ const signature=[
     day('Cherrapunjee → Shillong','After breakfast, stop at the Duwan Sing Syiem viewpoint and visit Seven Sisters Falls, Nohkalikai Falls and Mawsmai Cave before driving back to Shillong.','Shillong'),
     day('Shillong Cherry Blossom Festival','Spend the day at the Shillong Cherry Blossom Festival, when the city’s cherry trees flower in late autumn. Festival dates and programmes are announced by the organisers each year, so plan your travel dates around the confirmed schedule.','Shillong'),
     day('Shillong → Guwahati airport','After breakfast, check out and drive to Guwahati, visiting Kamakhya Temple if time permits before your flight.')
-  ],['Shillong Cherry Blossom Festival','Mawlynnong, Rewai & Dawki','Cherrapunjee waterfalls & caves'],'Six days in Meghalaya timed around Shillong’s cherry blossom season, with Dawki’s clear river, Mawlynnong village and the waterfalls of Cherrapunjee.',{featured:true,source:'Cherry blossom  shillong.docx'}),
+  ],['Shillong Cherry Blossom Festival','Mawlynnong, Rewai & Dawki','Cherrapunjee waterfalls & caves'],'Six days in Meghalaya timed around Shillong’s cherry blossom season, with Dawki’s clear river, Mawlynnong village and the waterfalls of Cherrapunjee.',{featured:true,source:'itineraries/cherry-blossom-shillong.docx'}),
   make('Signature',4,'Meghalaya, Kaziranga, Nagaland & Manipur','nagaland','Culture',[
     day('Guwahati → Shillong','Meet on arrival at Guwahati airport and drive to Shillong, stopping at Umiam Lake (Barapani), where kayaking and boating are optional. Visit the Cathedral of Mary if time permits.','Shillong'),
     sohraLunch,dawki(),kazirangaTransfer,
@@ -162,7 +162,7 @@ const signature=[
     day('Kohima museum & war cemetery','Visit the Nagaland State Museum, which introduces the attire, crafts and traditions of the state’s tribes, then the Kohima War Cemetery, a Second World War memorial with views over the town.','Kohima'),
     day('Khonoma village excursion','Travel about 20 km to Khonoma, recognised as India’s first green village for its community conservation and terraced fields. Spend unhurried time in the village before returning to Kohima.','Kohima'),
     kohimaImphal,loktakDay,imphalDepart
-  ],['Cherrapunjee, Mawlynnong & Dawki','Kaziranga safari','Kohima, Khonoma & Loktak Lake'],'Ten days from Meghalaya’s waterfalls and Kaziranga’s grasslands to the hills of Nagaland and the lakes of Manipur.',{featured:true,end:'Imphal',source:'shillong kohima imphal 10d.docx'}),
+  ],['Cherrapunjee, Mawlynnong & Dawki','Kaziranga safari','Kohima, Khonoma & Loktak Lake'],'Ten days from Meghalaya’s waterfalls and Kaziranga’s grasslands to the hills of Nagaland and the lakes of Manipur.',{featured:true,end:'Imphal',source:'itineraries/shillong-kohima-imphal-10d.docx'}),
   make('Signature',5,'Arunachal, Mizoram & Tripura Grand Tour','tripura','Culture',[
     bhalukpong('Guwahati',true),dirang(true),tawangDrive(),tawangDay(),bomdila,bomdilaGuwahati,
     day('Guwahati → Aizawl','After breakfast, transfer to Guwahati airport for your flight to Aizawl. Check in and spend the evening at leisure.','Aizawl'),
@@ -171,7 +171,7 @@ const signature=[
     day('Agartala palaces & temples','Take a tour covering Sepahijala Wildlife Sanctuary, Ujjayanta Palace, Tripura Sundari Temple and the Neermahal lake palace, with the rest of the day at leisure.','Agartala'),
     day('Unakoti excursion','Take a full-day trip to Unakoti to see its ancient rock-cut carvings and murals set among forest streams and waterfalls, then return to Agartala. Expect long driving hours.','Agartala'),
     day('Agartala → Agartala airport','After breakfast, transfer to Agartala airport. Your tour ends here.')
-  ],['Sela Pass & Tawang monasteries','Aizawl’s museum & crafts','Ujjayanta Palace, Neermahal & Unakoti'],'Twelve days across three states: Arunachal’s mountain monasteries, Mizoram’s hilltop capital and Tripura’s palaces and rock carvings.',{featured:true,end:'Agartala',source:'Arunachal,Mizoram,Tripura ITINERARY.docx'})
+  ],['Sela Pass & Tawang monasteries','Aizawl’s museum & crafts','Ujjayanta Palace, Neermahal & Unakoti'],'Twelve days across three states: Arunachal’s mountain monasteries, Mizoram’s hilltop capital and Tripura’s palaces and rock carvings.',{featured:true,end:'Agartala',source:'itineraries/arunachal-mizoram-tripura.docx'})
 ];
 
 export const packages=[...summer,...winter,...signature];

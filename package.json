@@ -3,16 +3,36 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "NE Insights static multi-page travel website",
+  "description": "NE Insights static multi-page travel website with a Netlify Function for enquiries",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:production": "node scripts/build.mjs --production",
     "dev": "node scripts/serve.mjs",
-    "preview": "node scripts/serve.mjs",
-    "check": "node scripts/check.mjs",
-    "netlify": "npm run build && npm run check"
+    "preview": "node scripts/build.mjs --production && node scripts/serve.mjs --no-build",
+    "images": "node scripts/images.mjs",
+    "favicons": "node scripts/favicons.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test:unit": "node --test \"tests/unit/**/*.test.mts\"",
+    "test:e2e": "playwright test",
+    "audit:seo": "node scripts/build.mjs --production && node scripts/audit-seo.mjs",
+    "audit:built": "node scripts/audit-seo.mjs --allow-preview",
+    "check": "npm run audit:seo",
+    "test": "npm run typecheck && npm run test:unit && npm run audit:seo && npm run test:e2e",
+    "verify:live": "node scripts/verify-live.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "nodemailer": "^10.0.13"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@netlify/functions": "^6.0.2",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "@types/nodemailer": "^8.0.2",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2"
   }
 }

@@ -67,14 +67,15 @@ toTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduc
 const parallaxItems = reduceMotion ? [] : [...document.querySelectorAll('[data-parallax]')];
 const updateParallax = () => {
   const vh = window.innerHeight;
-  parallaxItems.forEach(el => {
+  // Measure everything first, then write, so one element's update doesn't force layout for the next.
+  const updates = parallaxItems.map(el => {
     const host = el.parentElement.getBoundingClientRect();
-    if (host.bottom < -200 || host.top > vh + 200) return;
+    if (host.bottom < -200 || host.top > vh + 200) return null;
     const limit = Math.max(0, (el.offsetHeight - host.height) / 2 - 2);
     const raw = (host.top + host.height / 2 - vh / 2) * parseFloat(el.dataset.parallax) * -1;
-    const offset = Math.max(-limit, Math.min(limit, raw));
-    el.style.setProperty('--py', `${offset.toFixed(1)}px`);
+    return [el, Math.max(-limit, Math.min(limit, raw))];
   });
+  updates.forEach(update => { if (update) update[0].style.setProperty('--py', `${update[1].toFixed(1)}px`); });
 };
 let ticking = false;
 const onScroll = () => {
@@ -120,7 +121,9 @@ if (hero) {
 const revealItems = document.querySelectorAll('[data-reveal]');
 const settle = (el) => {
   el.classList.add('is-visible');
-  const delay = (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0) * 110;
+  // Read the stagger index from the inline style: getComputedStyle here would force a full style
+  // recalculation for every revealed element (hundreds of milliseconds on phones).
+  const delay = (parseFloat(el.style.getPropertyValue('--d')) || 0) * 110;
   setTimeout(() => { el.removeAttribute('data-reveal'); el.classList.remove('is-visible'); }, 1200 + delay);
 };
 if ('IntersectionObserver' in window && !reduceMotion) {
@@ -166,7 +169,12 @@ document.querySelectorAll('[data-carousel]').forEach(carousel => {
   next?.addEventListener('click', () => track.scrollBy({ left: stepSize() }));
   track.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
   window.addEventListener('resize', update);
-  update();
+  // Measure only when the carousel nears the viewport: measuring at start-up would force layout of
+  // below-the-fold content that the browser otherwise skips (content-visibility: auto).
+  if ('IntersectionObserver' in window) {
+    const seen = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { update(); seen.disconnect(); } }, { rootMargin: '200px 0px' });
+    seen.observe(carousel);
+  } else update();
 });
 document.querySelectorAll('[data-drag-scroll]').forEach(track => {
   let startX = 0, startScroll = 0, moved = false, down = false;
@@ -248,49 +256,260 @@ if (filters) {
   update();
 }
 
-document.querySelectorAll('[data-enquiry]').forEach(form => {
-  form.querySelector('[data-enable-form]').disabled = false;
-  const date = form.elements.date;
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  date.min = today;
+
+/* ---------- Enquiry forms ----------
+   Without JavaScript the forms POST to /api/enquiry and the server redirects to /thank-you/.
+   With JavaScript: inline validation (rules shared with the server), background sending with a
+   20-second timeout, error states that never clear the visitor's entries, and a WhatsApp option. */
+const rulesScript = document.getElementById('enquiry-rules');
+const enquiryConfig = rulesScript ? JSON.parse(rulesScript.textContent) : null;
+const REQUEST_TIMEOUT_MS = 20000;
+const WHATSAPP_TEXT_LIMIT = 1500;
+const EMAIL_PATTERN = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:".]+(\.[^\s@<>()[\]\\,;:".]+)+$/;
+const PHONE_CHARACTERS = /^[+()\-.\s0-9]+$/;
+const DRAFT_EXCLUDE = new Set(['ts', 'page', 'website', 'consent', 'form_type']);
+const SUMMARY_LABELS = [['name', 'Name'], ['phone', 'Phone'], ['email', 'Email'], ['date', 'Travel date'], ['adults', 'Travellers'], ['destinations', 'Destinations'], ['message', 'Message']];
+
+const sessionStore = (() => {
+  try { const store = window.sessionStorage; store.setItem('__ne', '1'); store.removeItem('__ne'); return store; } catch { return null; }
+})();
+const pad = (n) => String(n).padStart(2, '0');
+const localDate = (date = new Date()) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+/** Same checks and messages as the server (src/lib/enquiry-rules.mjs). Min/max lengths are checked
+    by hand because validity.tooShort does not fire for autofilled or scripted values. */
+const checkValue = (rule, value) => {
+  const m = rule.messages;
+  if (!value) return rule.required ? m.required : '';
+  if (rule.format === 'consent') return '';
+  if (rule.minLength && value.length < rule.minLength) return m.minLength;
+  if (rule.maxLength && value.length > rule.maxLength) return m.maxLength;
+  if (rule.format === 'email' && !EMAIL_PATTERN.test(value)) return m.format;
+  if (rule.format === 'phone') {
+    const digits = (value.match(/\d/g) || []).length;
+    if (!PHONE_CHARACTERS.test(value) || digits < rule.minDigits || digits > rule.maxDigits) return m.format;
+  }
+  if (rule.format === 'integer' && (!/^\d+$/.test(value) || +value < rule.min || +value > rule.max)) return m.format;
+  if (rule.format === 'date') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) return m.format;
+    const today = localDate();
+    if (value < today) return m.past;
+    if (value > `${+today.slice(0, 4) + 3}${today.slice(4)}`) return m.far;
+  }
+  return '';
+};
+
+const initEnquiryForm = (form) => {
+  const { fields: rules, phone, email, whatsapp } = enquiryConfig;
+  const status = form.querySelector('[data-form-status]');
+  const submit = form.querySelector('[data-submit]');
+  const submitLabel = form.querySelector('[data-submit-label]');
+  const idleLabel = submitLabel.textContent;
+  const waSend = form.querySelector('[data-whatsapp-send]');
+  const draftKey = `ne-enquiry-draft:${form.dataset.formType}`;
+  let attempted = false;
+  let sending = false;
+  let sent = false;
+  let draftTimer;
+
+  form.noValidate = true;
+  form.elements.ts.value = String(Date.now());
+  form.elements.page.value = location.href.split('#')[0];
+  if (form.elements.date) form.elements.date.min = localDate();
+
+  const controls = (name) => [...form.querySelectorAll(`[name="${name}"]`)];
+  const box = (name) => form.querySelector(`[data-field="${name}"]`);
+  const firstControl = (name) => box(name)?.querySelector('input,select,textarea');
+  const valueOf = (name) => {
+    const els = controls(name);
+    if (!els.length) return null;
+    if (els[0].type === 'checkbox') return name === 'consent' ? (els[0].checked ? 'on' : '') : els.filter(el => el.checked).map(el => el.value);
+    return els[0].value.trim();
+  };
+  const collect = () => {
+    const data = {};
+    for (const el of form.elements) if (el.name && !(el.name in data)) data[el.name] = valueOf(el.name);
+    return data;
+  };
+
+  /* Draft kept in sessionStorage so a reload or failed send never loses what the visitor typed. */
+  const saveDraft = () => {
+    if (!sessionStore || sent) return;
+    const data = Object.fromEntries(Object.entries(collect()).filter(([name]) => !DRAFT_EXCLUDE.has(name)));
+    try { sessionStore.setItem(draftKey, JSON.stringify(data)); } catch { /* storage full or blocked */ }
+  };
+  const clearDraft = () => { try { sessionStore?.removeItem(draftKey); } catch { /* ignore */ } };
+  const restoreDraft = () => {
+    let data = null;
+    try { data = JSON.parse(sessionStore?.getItem(draftKey) || 'null'); } catch { return; }
+    if (!data) return;
+    for (const [name, value] of Object.entries(data)) {
+      const els = controls(name);
+      if (!els.length) continue;
+      if (Array.isArray(value)) els.forEach(el => { el.checked = value.includes(el.value); });
+      else if (typeof value === 'string' && value) els[0].value = value;
+    }
+  };
+  restoreDraft();
+
   const interest = new URLSearchParams(location.search).get('interest');
   if (interest) {
-    const safeInterest = interest.slice(0, 200);
-    form.elements.message.value = `I’m interested in ${safeInterest}.`;
-    form.querySelectorAll('[name="destinations"]').forEach(field => { if (field.value === safeInterest) field.checked = true; });
+    const topic = interest.slice(0, 150);
+    form.elements.topic.value = topic;
+    if (!form.elements.message.value) form.elements.message.value = `I’m interested in ${topic}.`;
+    controls('destinations').forEach(el => { if (el.value === topic) el.checked = true; });
   }
-  let previousUrl;
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    if (!form.reportValidity()) return;
-    const data = new FormData(form);
-    if (data.get('website')) return;
-    const labels = { name:'Name', phone:'Phone', email:'Email', city:'Starting city', date:'Preferred date', duration:'Trip duration (days)', adults:'Adults / travellers', children:'Children', destinations:'Preferred destinations', services:'Services', style:'Travel style', budget:'Budget preference', requirements:'Special requirements', message:'Message' };
-    const rows = ['NE INSIGHTS — TRAVEL ENQUIRY', '', ...Object.entries(labels).flatMap(([key, label]) => {
-      const values = data.getAll(key).map(value => String(value).trim()).filter(Boolean);
-      return values.length ? [`${label}: ${values.join(', ')}`] : [];
-    }), '', 'This is an enquiry, not a confirmed booking.'];
-    const summary = rows.join('\n');
-    const feedback = form.querySelector('.form-feedback');
-    feedback.querySelector('[data-enquiry-summary]').textContent = summary;
-    if (previousUrl) URL.revokeObjectURL(previousUrl);
-    previousUrl = URL.createObjectURL(new Blob([summary], { type: 'text/plain;charset=utf-8' }));
-    feedback.querySelector('[data-download]').href = previousUrl;
-    const send = feedback.querySelector('[data-send]');
-    const email = form.dataset.email;
-    const whatsapp = form.dataset.whatsapp;
-    if (whatsapp || email) {
-      send.hidden = false;
-      send.href = whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(summary)}` : `mailto:${email}?subject=${encodeURIComponent('My Northeast India travel enquiry')}&body=${encodeURIComponent(summary)}`;
-      send.textContent = whatsapp ? 'Open WhatsApp to send →' : 'Open email to send →';
-      feedback.querySelector('[data-feedback-message]').textContent = 'Your enquiry has not been sent. Review the details, then open your email or WhatsApp app to send it. You can also download a copy.';
-    } else {
-      send.hidden = true;
-      feedback.querySelector('[data-feedback-message]').textContent = 'Your details have not been sent. Business contact details are still being added. Download this summary to keep your plans, then contact NE Insights once its contact information is available.';
+
+  const setFieldError = (name, message) => {
+    const container = box(name);
+    if (!container) return;
+    const error = container.querySelector('.field-error');
+    const hint = container.querySelector('.field-hint');
+    error.textContent = message;
+    error.hidden = !message;
+    container.classList.toggle('has-error', !!message);
+    container.querySelectorAll('input,select,textarea').forEach(el => {
+      const describedBy = [message ? error.id : '', hint?.id].filter(Boolean).join(' ');
+      if (message) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
+      if (describedBy) el.setAttribute('aria-describedby', describedBy); else el.removeAttribute('aria-describedby');
+    });
+  };
+  const validateField = (name) => {
+    const rule = rules[name];
+    const value = valueOf(name);
+    if (!rule || value === null || Array.isArray(value)) return '';
+    const message = checkValue(rule, value);
+    setFieldError(name, message);
+    return message;
+  };
+  // Validate in on-screen order so the summary and focus follow the layout.
+  const validateAll = () => [...form.querySelectorAll('[data-field]')].map(el => el.dataset.field).filter(name => rules[name]).map(name => [name, validateField(name)]).filter(([, message]) => message);
+
+  const summaryText = () => {
+    const data = collect();
+    const lines = SUMMARY_LABELS.map(([key, label]) => [label, Array.isArray(data[key]) ? data[key].join(', ') : data[key]]).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
+    const topic = data.topic ? ` about ${data.topic}` : '';
+    return [`Hello NE Insights, I would like to enquire${topic}.`, ...lines].join('\n').slice(0, WHATSAPP_TEXT_LIMIT);
+  };
+  const link = (text, href, external = false) => {
+    const a = document.createElement('a');
+    a.href = href;
+    a.textContent = text;
+    if (external) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    return a;
+  };
+  const hideStatus = () => { status.hidden = true; status.replaceChildren(); };
+  const showStatus = (kind, title, message = '', { errors = [], alternatives = false } = {}) => {
+    status.className = `form-status is-${kind}`;
+    status.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    const heading = document.createElement('p');
+    heading.className = 'form-status-title';
+    heading.textContent = title;
+    const parts = [heading];
+    if (message) { const p = document.createElement('p'); p.textContent = message; parts.push(p); }
+    if (errors.length) {
+      const list = document.createElement('ul');
+      for (const [name, text] of errors) {
+        const target = firstControl(name);
+        const item = document.createElement('li');
+        const a = link(text, `#${target?.id || ''}`);
+        a.addEventListener('click', (e) => { e.preventDefault(); target?.focus(); });
+        item.append(a);
+        list.append(item);
+      }
+      parts.push(list);
     }
-    feedback.hidden = false;
-    feedback.focus({preventScroll:true});
-    feedback.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
+    if (alternatives) {
+      const p = document.createElement('p');
+      p.className = 'form-status-alt';
+      const body = summaryText();
+      p.append('Reach us directly: ', link(`call ${phone}`, `tel:${phone.replace(/\s/g, '')}`), ', ', link('WhatsApp', `https://wa.me/${whatsapp}?text=${encodeURIComponent(body)}`, true), ' or ', link(`email ${email}`, `mailto:${email}?subject=${encodeURIComponent('Travel enquiry')}&body=${encodeURIComponent(body)}`), '.');
+      parts.push(p);
+    }
+    status.replaceChildren(...parts);
+    status.hidden = false;
+  };
+  const setSending = (on) => {
+    sending = on;
+    submit.disabled = on;
+    waSend?.setAttribute('aria-disabled', String(on));
+    form.setAttribute('aria-busy', String(on));
+    submitLabel.textContent = on ? 'Sending…' : idleLabel;
+  };
+  const showOffline = () => showStatus('warning', 'You appear to be offline.', 'Your details are safe in this form. Reconnect to the internet and press Send again, or contact us directly.', { alternatives: true });
+
+  form.addEventListener('focusout', (e) => {
+    const name = e.target.name;
+    if (!rules[name] || e.target.type === 'checkbox') return;
+    if (attempted || valueOf(name)) validateField(name);
   });
-});
+  form.addEventListener('input', (e) => {
+    const name = e.target.name;
+    if (rules[name] && box(name)?.classList.contains('has-error')) validateField(name);
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 300);
+  });
+  form.addEventListener('change', (e) => { if (e.target.name === 'consent' && attempted) validateField('consent'); saveDraft(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (sending) return;
+    attempted = true;
+    const errors = validateAll();
+    if (errors.length) {
+      showStatus('error', errors.length === 1 ? 'Please correct 1 field:' : `Please correct ${errors.length} fields:`, '', { errors });
+      firstControl(errors[0][0])?.focus();
+      return;
+    }
+    if (navigator.onLine === false) { showOffline(); status.focus(); return; }
+    hideStatus();
+    setSending(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response;
+    let body = {};
+    try {
+      response = await fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(collect()), signal: controller.signal, credentials: 'same-origin' });
+      body = await response.json().catch(() => ({}));
+    } catch (error) {
+      clearTimeout(timer);
+      setSending(false);
+      if (error.name === 'AbortError') showStatus('warning', 'This is taking longer than expected.', 'We stopped waiting after 20 seconds, so your enquiry may not have been sent. Your details are still in the form. Please try again in a moment, or contact us directly.', { alternatives: true });
+      else if (navigator.onLine === false) showOffline();
+      else showStatus('error', 'We couldn’t reach our server.', 'Please check your connection and try again. Your details are still in the form.', { alternatives: true });
+      status.focus();
+      return;
+    }
+    clearTimeout(timer);
+    if (response.ok && body.ok) {
+      // Stop any pending draft save so the details don't reappear in storage after a successful send.
+      sent = true;
+      clearTimeout(draftTimer);
+      clearDraft();
+      location.assign(body.redirect || '/thank-you/');
+      return;
+    }
+    setSending(false);
+    if (response.status === 422 && body.errors) {
+      const list = Object.entries(body.errors);
+      list.forEach(([name, message]) => setFieldError(name, message));
+      showStatus('error', list.length === 1 ? 'Please correct 1 field:' : `Please correct ${list.length} fields:`, '', { errors: list });
+      firstControl(list[0][0])?.focus();
+      return;
+    }
+    if (response.status === 429) showStatus('warning', 'Please wait a few minutes.', body.message || 'You have sent several enquiries in a short time.', { alternatives: true });
+    else showStatus('error', 'Your enquiry was not sent.', body.message || 'Something went wrong on our side. Your details are still in the form.', { alternatives: true });
+    status.focus();
+  });
+
+  // Returning with the Back button restores the page from cache with the button still disabled.
+  window.addEventListener('pageshow', () => { if (sending) setSending(false); sent = false; });
+
+  // WhatsApp alternative: opens WhatsApp with the form contents. Not subject to the bot timer.
+  waSend?.addEventListener('click', (e) => {
+    if (sending) { e.preventDefault(); return; }
+    waSend.href = `https://wa.me/${whatsapp}?text=${encodeURIComponent(summaryText())}`;
+  });
+};
+
+if (enquiryConfig) document.querySelectorAll('[data-enquiry]').forEach(initEnquiryForm);

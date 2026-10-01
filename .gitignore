@@ -11,3 +11,10 @@ node_modules/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Secrets and test output
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/

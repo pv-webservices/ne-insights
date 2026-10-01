@@ -1,14 +1,16 @@
 export const site = {
   name: 'NE Insights',
-  // SITE_URL wins; on Netlify fall back to its production URL or the deploy-preview URL.
-  url: process.env.SITE_URL || (process.env.CONTEXT === 'production' ? process.env.URL : process.env.DEPLOY_PRIME_URL) || '',
+  // Canonical domain for every page, sitemap and social card (deploy previews still point here and are noindex).
+  url: (process.env.SITE_URL || 'https://neinsights.in').replace(/\/$/, ''),
   phone: '+91 8473833199',
-  email: 'operations.neinsights@gmail.com',
+  email: 'operations@neinsights.in',
   // International digits only (no + or spaces), used for wa.me links.
   whatsapp: '918473833199',
   address: '',
   hours: '',
   socials: [],
+  // Add { name, jobTitle, image } once the client confirms it; this enables the founder (Person) schema.
+  founder: null,
   legalApproved: false,
   description: 'Your local travel partner for thoughtful journeys through Northeast India. Car rentals, handpicked stays, wildlife safaris and journeys made for you.'
 };

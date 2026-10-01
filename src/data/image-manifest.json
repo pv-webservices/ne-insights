@@ -1,0 +1,265 @@
+{
+  "logo": {
+    "dir": "brand",
+    "width": 360,
+    "height": 239,
+    "widths": [
+      120,
+      240,
+      360
+    ],
+    "og": false
+  },
+  "toaa": {
+    "dir": "brand",
+    "width": 240,
+    "height": 245,
+    "widths": [
+      120,
+      240
+    ],
+    "og": false
+  },
+  "fleet-muv": {
+    "dir": "illustrations",
+    "width": 588,
+    "height": 436,
+    "widths": [
+      400,
+      588
+    ],
+    "og": true
+  },
+  "fleet-sedan": {
+    "dir": "illustrations",
+    "width": 588,
+    "height": 436,
+    "widths": [
+      400,
+      588
+    ],
+    "og": true
+  },
+  "fleet-tempo": {
+    "dir": "illustrations",
+    "width": 588,
+    "height": 436,
+    "widths": [
+      400,
+      588
+    ],
+    "og": true
+  },
+  "hero-journey": {
+    "dir": "illustrations",
+    "width": 1376,
+    "height": 768,
+    "widths": [
+      400,
+      800,
+      1200,
+      1376
+    ],
+    "og": true
+  },
+  "homestay": {
+    "dir": "illustrations",
+    "width": 1000,
+    "height": 747,
+    "widths": [
+      400,
+      800,
+      1000
+    ],
+    "og": true
+  },
+  "loktak": {
+    "dir": "illustrations",
+    "width": 900,
+    "height": 672,
+    "widths": [
+      400,
+      800,
+      900
+    ],
+    "og": true
+  },
+  "mizoram-hills": {
+    "dir": "illustrations",
+    "width": 900,
+    "height": 672,
+    "widths": [
+      400,
+      800,
+      900
+    ],
+    "og": true
+  },
+  "traveller": {
+    "dir": "illustrations",
+    "width": 1376,
+    "height": 768,
+    "widths": [
+      400,
+      800,
+      1200,
+      1376
+    ],
+    "og": true
+  },
+  "village-walk": {
+    "dir": "illustrations",
+    "width": 1000,
+    "height": 747,
+    "widths": [
+      400,
+      800,
+      1000
+    ],
+    "og": true
+  },
+  "wild-tiger": {
+    "dir": "illustrations",
+    "width": 1376,
+    "height": 768,
+    "widths": [
+      400,
+      800,
+      1200,
+      1376
+    ],
+    "og": true
+  },
+  "arunachal-pradesh": {
+    "dir": "places",
+    "width": 1200,
+    "height": 629,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "assam": {
+    "dir": "places",
+    "width": 1200,
+    "height": 800,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "bridge": {
+    "dir": "places",
+    "width": 1200,
+    "height": 800,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "hero": {
+    "dir": "places",
+    "width": 1600,
+    "height": 900,
+    "widths": [
+      400,
+      800,
+      1200,
+      1600
+    ],
+    "og": true
+  },
+  "manipur": {
+    "dir": "places",
+    "width": 600,
+    "height": 399,
+    "widths": [
+      400,
+      600
+    ],
+    "og": true
+  },
+  "meghalaya": {
+    "dir": "places",
+    "width": 1200,
+    "height": 609,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "nagaland": {
+    "dir": "places",
+    "width": 1200,
+    "height": 900,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "tripura": {
+    "dir": "places",
+    "width": 1200,
+    "height": 848,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "waterfall": {
+    "dir": "places",
+    "width": 1200,
+    "height": 922,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "manas": {
+    "dir": "wildlife",
+    "width": 1200,
+    "height": 900,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "pobitora": {
+    "dir": "wildlife",
+    "width": 1200,
+    "height": 794,
+    "widths": [
+      400,
+      800,
+      1200
+    ],
+    "og": true
+  },
+  "rhino": {
+    "dir": "wildlife",
+    "width": 1000,
+    "height": 642,
+    "widths": [
+      400,
+      800,
+      1000
+    ],
+    "og": true
+  }
+}

@@ -1,60 +1,54 @@
-# Netlify configuration for the NE Insights static website.
-# The build uses only Node.js built-in modules — there are no npm dependencies to install.
+# Netlify configuration for the NE Insights website (static pages + one function).
+# Deploys automatically from GitHub (pv-webservices/ne-insights, branch main).
 
 [build]
-  command = "npm run build && npm run check"
+  # Production context builds indexable pages; deploy previews are noindex. The audit and unit tests
+  # must pass or the deploy is cancelled and the previous version stays live.
+  command = "npm run build && npm run audit:built && npm run test:unit"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  # Set NC_PRODUCTION = "true" in Netlify (Site configuration → Environment variables)
-  # once the launch settings in src/data/site.mjs are complete. Until then pages are
-  # published with noindex and robots.txt disallows crawling. See README.md.
 
-# The previous sample-package URLs now live under seasonal codes.
-[[redirects]]
-  from = "/tour-packages/meghalaya-explorer/*"
-  to = "/tour-packages/summer-ne-07/"
-  status = 301
-  force = true
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
-[[redirects]]
-  from = "/tour-packages/assam-wildlife-culture/*"
-  to = "/tour-packages/winter-ne-14/"
-  status = 301
-  force = true
+# Redirects (canonical host, /index.html → folder URLs, retired package URLs) are generated into
+# dist/_redirects by scripts/build.mjs. Netlify forces HTTPS and adds trailing slashes itself.
 
-[[redirects]]
-  from = "/tour-packages/arunachal-scenic-circuit/*"
-  to = "/tour-packages/summer-ne-12/"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "/tour-packages/complete-northeast-escape/*"
-  to = "/tour-packages/winter-ne-17/"
-  status = 301
-  force = true
-
-# Security headers are generated into dist/_headers by the build.
-# Caching: file names are not fingerprinted, so images get a week and fonts a year.
 [[headers]]
-  for = "/images/*"
+  for = "/*"
   [headers.values]
-    Cache-Control = "public, max-age=604800"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# CSS and JS file names contain a content hash, so they can be cached for a year.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/fonts/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-    Access-Control-Allow-Origin = "*"
+
+# Images keep stable URLs (they appear in social cards and image search): 30 days.
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"
 
 [[headers]]
-  for = "/*.css"
+  for = "/site.webmanifest"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/manifest+json; charset=utf-8"
+    Cache-Control = "public, max-age=604800"
 
 [[headers]]
-  for = "/*.js"
+  for = "/thank-you/*"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Robots-Tag = "noindex"
