@@ -66,12 +66,22 @@ describe('traveller stories section', () => {
 });
 
 describe('shareable feedback page', () => {
-  it('shows the form inline and leaves out the stories grid when there are no approved testimonials', () => {
+  it('shows the form inline and keeps the stories grid hidden when there are no approved testimonials', () => {
     const html = feedbackPageContent([]);
     assert.match(html, /id="form-feedback"/);
     assert.match(html, /aria-labelledby="feedback-page-title"/);
     assert.doesNotMatch(html, /<dialog/);
-    assert.doesNotMatch(html, /story-card|story-grid/);
+    assert.doesNotMatch(html, /story-card/);
+    assert.match(html, /<section [^>]*id="traveller-stories-grid" data-stories-grid data-stories="0-[a-z0-9]+" hidden>/);
+  });
+
+  it('stamps sections with a version that changes when the approved testimonials change', () => {
+    const one = section(travellerStories([FIXTURE]));
+    const renamed = section(travellerStories([{ ...FIXTURE, name: 'Renamed Tester' }]));
+    const version = (html: string) => html.match(/data-stories="([^"]+)"/)?.[1];
+    assert.ok(version(one));
+    assert.notEqual(version(one), version(renamed));
+    assert.equal(version(one), version(section(travellerStories([FIXTURE]))));
   });
 
   it('lists every approved testimonial in a grid below the form', () => {
@@ -102,5 +112,7 @@ describe('approved testimonial data', () => {
     ];
     for (const [entry, pattern] of bad) assert.throws(() => checkTestimonials([entry]), pattern, JSON.stringify(entry).slice(0, 80));
     assert.throws(() => checkTestimonials([FIXTURE, FIXTURE]), /duplicate id/);
+    // Dates and prices are not phone numbers.
+    assert.doesNotThrow(() => checkTestimonials([{ ...FIXTURE, text: 'Our winter 2025 - 2026 trip cost about 45,000 rupees for 2 people.' }]));
   });
 });

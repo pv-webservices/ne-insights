@@ -150,8 +150,8 @@ if ('IntersectionObserver' in window && !reduceMotion) {
   counters.forEach(el => countIo.observe(el));
 }
 
-/* ---------- Carousels & drag-to-scroll ---------- */
-document.querySelectorAll('[data-carousel]').forEach(carousel => {
+/* ---------- Carousels & drag-to-scroll (also run on sections swapped in later) ---------- */
+const initCarousel = (carousel) => {
   const track = carousel.querySelector('.carousel-track');
   const section = carousel.closest('section');
   const prev = section.querySelector('[data-carousel-prev]');
@@ -175,8 +175,8 @@ document.querySelectorAll('[data-carousel]').forEach(carousel => {
     const seen = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { update(); seen.disconnect(); } }, { rootMargin: '200px 0px' });
     seen.observe(carousel);
   } else update();
-});
-document.querySelectorAll('[data-drag-scroll]').forEach(track => {
+};
+const initDragScroll = (track) => {
   let startX = 0, startScroll = 0, moved = false, down = false;
   track.addEventListener('pointerdown', e => {
     if (e.pointerType !== 'mouse' || track.scrollWidth <= track.clientWidth) return;
@@ -191,7 +191,12 @@ document.querySelectorAll('[data-drag-scroll]').forEach(track => {
   window.addEventListener('pointerup', () => { if (!down) return; down = false; setTimeout(() => track.classList.remove('is-dragging'), 0); });
   track.addEventListener('click', e => { if (moved) { e.preventDefault(); moved = false; } }, true);
   track.addEventListener('dragstart', e => e.preventDefault());
-});
+};
+const initScrollers = (root = document) => {
+  root.querySelectorAll('[data-carousel]').forEach(initCarousel);
+  root.querySelectorAll('[data-drag-scroll]').forEach(initDragScroll);
+};
+initScrollers();
 
 /* ---------- Button colour fill follows the pointer ---------- */
 document.addEventListener('pointerover', e => {
@@ -552,17 +557,56 @@ else if (feedbackDialog) {
     document.body.classList.remove('dialog-open');
     opener?.focus();
   });
-  document.querySelectorAll('[data-feedback-open]').forEach(trigger => {
+  // Delegated, so the button keeps working when the stories section is replaced by the live version.
+  const enhanceTriggers = (root = document) => root.querySelectorAll('[data-feedback-open]').forEach(trigger => {
     trigger.setAttribute('role', 'button');
     trigger.setAttribute('aria-haspopup', 'dialog');
     trigger.setAttribute('aria-controls', feedbackDialog.id);
-    trigger.addEventListener('click', e => { e.preventDefault(); open(trigger); });
-    // role="button" promises Space as well as Enter.
-    trigger.addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); open(trigger); } });
+  });
+  enhanceTriggers();
+  document.addEventListener('stories:updated', e => enhanceTriggers(e.target));
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest?.('[data-feedback-open]');
+    if (trigger) { e.preventDefault(); open(trigger); }
+  });
+  // role="button" promises Space as well as Enter.
+  document.addEventListener('keydown', e => {
+    const trigger = e.key === ' ' && e.target.closest?.('[data-feedback-open]');
+    if (trigger) { e.preventDefault(); open(trigger); }
   });
   feedbackDialog.querySelector('[data-feedback-close]')?.addEventListener('click', () => feedbackDialog.close());
   // The panel fills the dialog, so a press that starts and ends on the dialog itself is on the backdrop.
   // (Checking both ends stops a text selection dragged outside the panel from closing it.)
   feedbackDialog.addEventListener('pointerdown', e => { pressedBackdrop = e.target === feedbackDialog; });
   feedbackDialog.addEventListener('click', e => { if (pressedBackdrop && e.target === feedbackDialog) feedbackDialog.close(); pressedBackdrop = false; });
+}
+
+/* ---------- Approved traveller stories, loaded live ----------
+   The page is built with the stories known at deploy time; testimonials approved from the feedback email
+   since then come from /api/testimonials (same templates, CDN-cached for a minute). A section is only
+   replaced when its data-stories version differs, and is left as it is if the request fails. */
+const liveStories = [...document.querySelectorAll('[data-stories]')];
+if (liveStories.length && 'fetch' in window) {
+  let request;
+  const load = () => (request ??= fetch('/api/testimonials', { headers: { Accept: 'application/json' } }).then(res => (res.ok ? res.json() : null)).catch(() => null));
+  const swap = async (section) => {
+    const data = await load();
+    const html = data && (section.hasAttribute('data-stories-grid') ? data.grid : data.section);
+    if (!html || data.version === section.dataset.stories) return;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const fresh = template.content.firstElementChild;
+    if (!fresh) return;
+    section.replaceWith(fresh);
+    initScrollers(fresh);
+    fresh.dispatchEvent(new CustomEvent('stories:updated', { bubbles: true }));
+  };
+  // Fetch only when a section is getting close, so it never competes with the first page load. A hidden
+  // (still empty) grid has no position on the page, so it is checked straight away instead.
+  const near = 'IntersectionObserver' in window ? new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    near.unobserve(entry.target);
+    swap(entry.target);
+  }), { rootMargin: '1200px 0px' }) : null;
+  liveStories.forEach(section => (near && !section.hidden ? near.observe(section) : swap(section)));
 }

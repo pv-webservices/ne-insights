@@ -1,7 +1,11 @@
 // Enquiry endpoint logic, independent of Netlify so it can be unit-tested with a mock mail transport.
 // One endpoint serves enquiries and traveller feedback; `form_type` selects the rules, email and thank-you page.
 import { MIN_FILL_MS, formKind, successPath, validateSubmission, type FormKind } from '../../../src/lib/enquiry-rules.mjs';
-import { buildEnquiryEmail, buildFeedbackEmail, readMailConfig, type MailConfig, type MailMessage } from './email.mts';
+import { site } from '../../../src/data/site.mjs';
+import { publishableEntry, publishProblem } from '../testimonials/publish.mts';
+import { REVIEW_PATH } from '../testimonials/review.mts';
+import { APPROVE_LINK_TTL_MS, reviewKey, signReview } from '../testimonials/review-token.mts';
+import { buildEnquiryEmail, buildFeedbackEmail, readMailConfig, type FeedbackReview, type MailConfig, type MailMessage } from './email.mts';
 import { BadRequestError, htmlErrorPage, jsonResponse, parseBody, redirectResponse, wantsJson, type FieldInput } from './http.mts';
 import { clientIp, isAllowedOrigin, parseOriginList, suspiciousReasons, type RateLimiter } from './security.mts';
 
@@ -35,7 +39,20 @@ const MESSAGES = {
   deliveryFailed: (kind: FormKind) => `We couldn’t deliver your ${NOUN[kind]} just now. Your details are still in the form. ${PHONE_FALLBACK}`,
 } as const;
 
-const EMAIL_BUILDERS = { enquiry: buildEnquiryEmail, feedback: buildFeedbackEmail } as const;
+/**
+ * Signed Approve / Reject links for a feedback email. They point at the live site (REVIEW_BASE_URL overrides
+ * it for local preview); the token carries only the publishable testimonial.
+ */
+const feedbackReview = (values: Record<string, string | string[]>, submittedAt: number, env: Record<string, string | undefined>): FeedbackReview | undefined => {
+  const entry = publishableEntry(values, submittedAt);
+  const problem = publishProblem(entry);
+  if (problem) return { problem };
+  const key = reviewKey(env);
+  if (!key) return undefined;
+  const token = encodeURIComponent(signReview({ entry, expiresAt: submittedAt + APPROVE_LINK_TTL_MS }, key));
+  const base = `${(env.REVIEW_BASE_URL || site.url).replace(/\/$/, '')}${REVIEW_PATH}?t=${token}`;
+  return { approveUrl: `${base}&do=approve`, rejectUrl: `${base}&do=reject` };
+};
 /** Free-text fields scanned for spam keywords and links. */
 const SPAM_FIELDS: Record<FormKind, string[]> = { enquiry: ['name', 'message', 'requirements', 'city', 'topic'], feedback: ['name', 'feedback', 'city'] };
 
@@ -119,16 +136,15 @@ export const createEnquiryHandler = (deps: EnquiryDependencies) => {
       return form.fail(500, 'not_configured', MESSAGES.notConfigured(kind));
     }
 
-    const message = EMAIL_BUILDERS[kind](
-      {
-        values,
-        pageUrl: sourcePage(fields, req.headers),
-        submittedAt: now(),
-        spamReasons: suspiciousReasons(SPAM_FIELDS[kind].map((name) => values[name]).join(' ')),
-        notes: timer === 'ok' ? [] : [timer],
-      },
-      config,
-    );
+    const submittedAt = now();
+    const details = {
+      values,
+      pageUrl: sourcePage(fields, req.headers),
+      submittedAt,
+      spamReasons: suspiciousReasons(SPAM_FIELDS[kind].map((name) => values[name]).join(' ')),
+      notes: timer === 'ok' ? [] : [timer],
+    };
+    const message = kind === 'feedback' ? buildFeedbackEmail(details, config, feedbackReview(values, submittedAt, env)) : buildEnquiryEmail(details, config);
     try {
       await withTimeout(deps.createTransport(config).sendMail(message), deps.sendTimeoutMs ?? SEND_TIMEOUT_MS);
     } catch (error) {

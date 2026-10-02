@@ -14,7 +14,9 @@ const OPTIONAL_TEXT=['journey','location','date'];
 const MIN_TEXT=20;
 // Private details must never reach a public page, even by accident in the review text.
 const EMAIL_LIKE=/[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
-const PHONE_LIKE=/\+?\d[\d\s().-]{8,}\d/;
+const PHONE_CANDIDATES=/\+?\d[\d\s().-]{8,}\d/g;
+/** A run of digits and separators holding at least 10 digits (the phone-number rule), so "2025 - 2026" is fine. */
+const hasPhoneNumber=text=>(text.match(PHONE_CANDIDATES)??[]).some(run=>run.replace(/\D/g,'').length>=10);
 /** Cards revealed with a stagger; later cards are off-screen in the carousel and appear as they scroll in. */
 const STAGGERED=3;
 
@@ -29,7 +31,7 @@ const entryProblems=(t,where)=>{
   for(const key of OPTIONAL_TEXT)if(t[key]!==undefined&&typeof t[key]!=='string')problems.push(`${where}: ${key} must be text`);
   if(t.featured!==undefined&&typeof t.featured!=='boolean')problems.push(`${where}: featured must be true or false`);
   const shown=[t.name,t.text,...OPTIONAL_TEXT.map(key=>t[key])].filter(value=>typeof value==='string').join(' ');
-  if(EMAIL_LIKE.test(shown)||PHONE_LIKE.test(shown))problems.push(`${where}: appears to contain an email address or phone number`);
+  if(EMAIL_LIKE.test(shown)||hasPhoneNumber(shown))problems.push(`${where}: appears to contain an email address or phone number`);
   return problems;
 };
 
@@ -99,20 +101,42 @@ const FORM_INTRO=`Tell us how your Northeast journey went. Your email address an
 const feedbackDialog=()=>`<dialog class="feedback-dialog" id="${DIALOG_ID}" aria-labelledby="feedback-title" aria-describedby="feedback-intro" data-feedback-dialog><div class="feedback-dialog-inner"><div class="feedback-dialog-head"><div><p class="eyebrow">TRAVELLER STORIES</p><h2 id="feedback-title">Share your experience</h2></div><button type="button" class="dialog-close" data-feedback-close aria-label="Close feedback form"><span></span><span></span></button></div><div class="feedback-dialog-body"><p class="form-intro" id="feedback-intro">${FORM_INTRO}</p>${feedbackForm('feedback-title')}</div></div></dialog>`;
 
 /**
+ * Short fingerprint of what a stories section shows. The static page carries it; site.js compares it with
+ * the live list (/api/testimonials) and only swaps the section when the approved testimonials changed.
+ * @param {Testimonial[]} stories
+ */
+export const storiesVersion=stories=>{
+  let hash=0x811c9dc5; // FNV-1a
+  for(const char of JSON.stringify(stories)){hash^=char.codePointAt(0)??0;hash=Math.imul(hash,0x01000193)>>>0;}
+  return `${stories.length}-${hash.toString(36)}`;
+};
+/** Sections swapped in after the page has loaded must not wait for the scroll-reveal observer. */
+const withoutReveal=html=>html.replace(/ data-reveal(="[a-z]+")?/g,'');
+
+/** Homepage "Traveller stories" section: the carousel, a single card, or the invitation when there are none. */
+export const storiesSection=(list=approved,{live=false}={})=>{
+  const stories=checkTestimonials(list);
+  const html=`<section class="section stories-section${stories.length?'':' is-empty'}" id="traveller-stories" data-stories="${storiesVersion(stories)}">${stories.length?storiesView(stories):emptyView()}</section>`;
+  return live?withoutReveal(html):html;
+};
+
+/** Every approved testimonial as a grid (the /feedback/ page). Hidden while there are none. */
+export const storiesGrid=(list=approved,{live=false}={})=>{
+  const stories=checkTestimonials(list);
+  const html=`<section class="section stories-section" id="traveller-stories-grid" data-stories-grid data-stories="${storiesVersion(stories)}"${stories.length?'':' hidden'}><div class="container">${sectionHead('TRAVELLER STORIES',TITLE,'Experiences shared by travellers who explored the Northeast with us.')}<div class="story-grid">${stories.map(storyCard).join('')}</div></div></section>`;
+  return live?withoutReveal(html):html;
+};
+
+/**
  * Body of the shareable /feedback/ page: the form inline (no dialog), how review works, and every
- * approved testimonial below it. Without approved testimonials that last section is left out.
+ * approved testimonial below it.
  * @param {readonly unknown[]} [list]
  */
 export const feedbackPageContent=(list=approved)=>{
-  const stories=checkTestimonials(list);
   const form=`<div class="feedback-sheet"><p class="eyebrow">TRAVELLER STORIES</p><h2 id="feedback-page-title">Share your experience</h2><p class="form-intro">${FORM_INTRO}</p>${feedbackForm('feedback-page-title')}</div>`;
   const side=`<aside class="form-side"><h2>How traveller stories work</h2><p>Every journey through the Northeast becomes a story of its own. Yours helps us improve and helps future travellers plan with confidence.</p>${processList(false)}</aside>`;
-  const grid=stories.length?`<section class="section stories-section" id="traveller-stories"><div class="container">${sectionHead('TRAVELLER STORIES',TITLE,'Experiences shared by travellers who explored the Northeast with us.')}<div class="story-grid">${stories.map(storyCard).join('')}</div></div></section>`:'';
-  return `<section class="section"><div class="container form-layout">${form}${side}</div></section>${grid}`;
+  return `<section class="section"><div class="container form-layout">${form}${side}</div></section>${storiesGrid(list)}`;
 };
 
 /** @param {readonly unknown[]} [list] approved testimonials (tests pass fixtures; the site uses the data file) */
-export const travellerStories=(list=approved)=>{
-  const stories=checkTestimonials(list);
-  return `<section class="section stories-section${stories.length?'':' is-empty'}" id="traveller-stories">${stories.length?storiesView(stories):emptyView()}</section>${feedbackDialog()}`;
-};
+export const travellerStories=(list=approved)=>`${storiesSection(list)}${feedbackDialog()}`;

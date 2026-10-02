@@ -12,6 +12,9 @@ import {fileURLToPath} from 'node:url';
 import nodemailer from 'nodemailer';
 import {createEnquiryHandler} from '../netlify/lib/enquiry/handler.mts';
 import {createRateLimiter} from '../netlify/lib/enquiry/security.mts';
+import {createReviewHandler} from '../netlify/lib/testimonials/review.mts';
+import {createTestimonialsHandler} from '../netlify/lib/testimonials/publish.mts';
+import {fileTestimonialStore} from '../netlify/lib/testimonials/store.mts';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 if(!process.argv.includes('--no-build')){
@@ -38,9 +41,19 @@ const matchRedirect=(rules,pathname)=>{
   return null;
 };
 
+// Approved testimonials live in a JSON file locally (Netlify Blobs on the live site). Feedback-email
+// Approve/Reject links point at this server. TESTIMONIAL_STORE + RESET_TESTIMONIAL_STORE are used by the tests.
+const storeFile=path.resolve(root,process.env.TESTIMONIAL_STORE||'output/testimonials-store.json');
+if(process.env.RESET_TESTIMONIAL_STORE==='true')await writeFile(storeFile,'{}').catch(()=>{});
+const testimonialStore=fileTestimonialStore(storeFile);
+const previewEnv=()=>({SMTP_HOST:'preview.invalid',SMTP_PORT:'465',SMTP_USER:'preview',SMTP_PASS:'preview',MAIL_TO:'operations@neinsights.in',MAIL_FROM:'operations@neinsights.in',REVIEW_BASE_URL:`http://localhost:${port}`,...process.env});
+const review=createReviewHandler({env:previewEnv,store:testimonialStore,rateLimiter:createRateLimiter({limit:200,windowMs:600000})});
+const liveTestimonials=createTestimonialsHandler({store:testimonialStore});
+const apiRoutes={'/api/feedback-review':review,'/api/testimonials':liveTestimonials};
+
 const previewTransport=nodemailer.createTransport({streamTransport:true,buffer:true,newline:'unix'});
 const enquiry=createEnquiryHandler({
-  env:()=>({SMTP_HOST:'preview.invalid',SMTP_PORT:'465',SMTP_USER:'preview',SMTP_PASS:'preview',MAIL_TO:'operations@neinsights.in',MAIL_FROM:'operations@neinsights.in',...process.env}),
+  env:previewEnv,
   createTransport:()=>({sendMail:async message=>{
     const info=await previewTransport.sendMail(message);
     await mkdir(mailDir,{recursive:true});
@@ -62,8 +75,9 @@ const redirects=await loadRedirects();
 http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,'http://localhost');
-    if(url.pathname==='/api/enquiry'){
-      const response=await enquiry(await toWebRequest(req),{ip:req.socket.remoteAddress});
+    const api=url.pathname==='/api/enquiry'?enquiry:apiRoutes[url.pathname];
+    if(api){
+      const response=await api(await toWebRequest(req),{ip:req.socket.remoteAddress});
       res.writeHead(response.status,Object.fromEntries(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
       return;

@@ -1,39 +1,30 @@
 # Collecting traveller feedback
 
-Send travellers this link after their trip: **<https://neinsights.in/feedback/>**. It opens the "Share your experience" form directly (no pop-up), so it works well on WhatsApp and in email. The same form is also on the homepage (Share Your Experience button) and linked in every page footer. The page is kept out of search results (`noindex`), and approved testimonials appear on it, below the form, once they've been added.
+Send travellers this link after their trip: **<https://neinsights.in/feedback/>**. It opens the "Share your experience" form directly (no pop-up), so it works well on WhatsApp and in email. The same form is also on the homepage (Share Your Experience button) and linked in every page footer. The page is kept out of search results (`noindex`), and approved testimonials appear on it, below the form.
 
 Example message: *"Thank you for travelling with NE Insights! We'd love to hear how your trip went. It takes two minutes: https://neinsights.in/feedback/"*
 
-# Publishing an approved testimonial
+# Approving or rejecting feedback (no code changes)
 
-The homepage "Traveller stories" section (and the `/feedback/` page) shows **only** testimonials that a developer has added to `src/data/testimonials.mjs`. Feedback sent through the "Share your experience" form is emailed to `operations@neinsights.in` and is **never** published automatically. While the list is empty, the homepage shows an invitation instead of a carousel.
+Every feedback email to `operations@neinsights.in` has two buttons at the top: **✓ Approve & publish** and **✕ Reject**.
 
-1. **Receive the feedback email.** Subject: `New traveller feedback from {Name} — {rating}/5`. (A `[Possible spam]` prefix means check it carefully first.)
-2. **Get NE Insights' approval** to feature this feedback.
-3. **Check the permission.** The email must say `Permission to publish: Yes`. If you're unsure which name or city the traveller wants shown, ask them by replying to the email.
-4. **Open `src/data/testimonials.mjs`** and add an entry inside the `testimonials` array:
+- **Approve & publish** opens a review page showing the feedback. You can shorten the name shown on the website (e.g. "Rahul S."), then press **Approve & publish**. It appears on the homepage ("Traveller stories") and on `/feedback/` within about a minute. Nothing is redeployed.
+- **Reject** opens the same page. Press **Reject** and the feedback is not shown. If it was already published, the button says **Remove from website** and takes it down.
+- Opening a button's link only shows the page. Nothing changes until the button on that page is pressed. (Email security scanners open links automatically, so this matters.)
+- **Keep feedback emails.** The Reject button keeps working for good, so a review can be removed later, for example if the traveller withdraws permission. Approve links expire after 180 days.
+- The links are signed, so they can't be guessed or edited, but anyone holding the email can use them. Don't forward feedback emails outside the team.
+- If the feedback contains an email address or phone number, the email says it can't be published as submitted and shows no Approve button.
 
-   ```js
-   export const testimonials = [
-     {
-       id: 'meghalaya-2026-10-rahul',   // unique, lowercase-hyphenated
-       name: 'Rahul S.',                // as the traveller agreed to be named
-       rating: 5,                       // the submitted rating, 1–5
-       text: 'The traveller’s own words, as approved.',
-       journey: 'Meghalaya journey',    // optional
-       location: 'Delhi',               // optional: the city they shared
-       date: 'October 2026',            // optional: month and year of the trip
-       featured: true                   // optional: shows first
-     }
-   ];
-   ```
+With one approved testimonial the homepage shows a single card. With two or more it shows the carousel, newest first. With none, it shows the "Your journey could inspire the next one" invitation.
 
-   Use the traveller's words. Fix obvious typos only, and shorten the text only with their agreement.
-5. **Never add the email address, phone number or anything else private.** The build fails if an entry has any field other than those above, or if the text looks like it contains an email address or phone number.
-6. **Build and test:** run `npm run build`, then `npm test` (or at least `npm run test:unit && npm run audit:seo`). Check the homepage with `npm run dev`. With two or more testimonials the carousel appears automatically.
-7. **Deploy:** commit and push to `main`. Netlify builds and publishes the site.
+## How it works (for developers)
 
-To remove a testimonial (for example, if the traveller withdraws permission), delete its entry and deploy again. Do not add Review or AggregateRating structured data for these testimonials; the SEO audit fails if any appears.
+- `/api/feedback-review` (`netlify/functions/feedback-review.mts`) serves the review page. The link token carries the publishable testimonial only (name, rating, text, journey, city), compressed and HMAC-signed. The key is `FEEDBACK_REVIEW_SECRET` if set, otherwise derived from `SMTP_PASS`. Changing either secret invalidates the links in older emails.
+- Approved testimonials are stored in **Netlify Blobs** (site-wide store `approved-testimonials`). Feedback is never stored before approval.
+- `/api/testimonials` (`netlify/functions/testimonials.mts`) returns the approved list rendered with the site's own templates. The CDN caches it for 60 seconds. `public/site.js` swaps the homepage section and the `/feedback/` grid when the list differs from what the page was built with.
+- No rebuild happens on approval. That's deliberate: on Netlify's credit-based free plan each production deploy costs credits, and running out pauses the site.
+- Local preview (`npm run dev`) stores approvals in `output/testimonials-store.json`, and the email links point at the local server.
+- `src/data/testimonials.mjs` can still hold testimonials added by hand. These are built into the page and merged with approved ones. Do not add Review or AggregateRating structured data; the SEO audit fails if any appears.
 
 # Traveller stories and feedback form — 2 October 2026
 

@@ -4,7 +4,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { travellerStories } from '../../src/components/testimonials.mjs';
+import { checkTestimonials, storiesGrid, storiesSection, storiesVersion, travellerStories } from '../../src/components/testimonials.mjs';
 
 test.use({ reducedMotion: 'reduce' });
 
@@ -32,8 +32,10 @@ const fillFeedback = async (page: Page) => {
   await form.getByLabel(/may publish my feedback/).check();
   await form.getByLabel(/I have read the privacy policy/).check();
 };
-/** Serves the real homepage with the stories section rendered from fixtures. */
+/** Serves the real homepage with the stories section rendered from fixtures (and the live list agreeing with it). */
 const withFixtures = async (page: Page) => {
+  const stories = checkTestimonials(FIXTURES);
+  await page.route('**/api/testimonials', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: storiesVersion(stories), count: stories.length, section: storiesSection(stories, { live: true }), grid: storiesGrid(stories, { live: true }) }) }));
   await page.route('**/', async (route) => {
     if (new URL(route.request().url()).pathname !== '/') return route.fallback();
     const html = await (await route.fetch()).text();

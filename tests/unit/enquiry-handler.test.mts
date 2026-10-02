@@ -4,6 +4,8 @@ import nodemailer from 'nodemailer';
 import { createEnquiryHandler, type MailTransport } from '../../netlify/lib/enquiry/handler.mts';
 import type { MailConfig, MailMessage } from '../../netlify/lib/enquiry/email.mts';
 import { createRateLimiter } from '../../netlify/lib/enquiry/security.mts';
+import { checkTestimonials } from '../../src/components/testimonials.mjs';
+import { reviewKey, verifyReview } from '../../netlify/lib/testimonials/review-token.mts';
 
 // 1 October 2026, 12:00 in India.
 const NOW = Date.UTC(2026, 9, 1, 6, 30);
@@ -357,11 +359,39 @@ describe('traveller feedback', () => {
     assert.deepEqual(mail.from, { name: 'Rahul Sharma via NE Insights', address: 'operations@neinsights.in' });
     assert.deepEqual(mail.replyTo, { name: 'Rahul Sharma', address: 'rahul@example.com' });
     assert.equal(mail.to, 'operations@neinsights.in');
-    for (const expected of ['New traveller feedback', 'Traveller feedback', 'Rahul Sharma', 'rahul@example.com', '★★★★★ 5/5', 'Custom Tour Packages', 'Meghalaya, Assam', 'Delhi', 'homestay in Sohra', 'Permission to publish', 'Privacy consent', 'https://neinsights.in/', 'Thursday, 1 October 2026', 'Nothing has been published']) {
+    for (const expected of ['New traveller feedback', 'Traveller feedback', 'Rahul Sharma', 'rahul@example.com', '★★★★★ 5/5', 'Custom Tour Packages', 'Meghalaya, Assam', 'Delhi', 'homestay in Sohra', 'Permission to publish', 'Privacy consent', 'https://neinsights.in/', 'Thursday, 1 October 2026', 'Nothing is shown on the website unless you press']) {
       assert.ok(mail.text.includes(expected), `text should include ${expected}`);
       assert.ok(mail.html.includes(expected), `html should include ${expected}`);
     }
     assert.doesNotMatch(mail.text, /Phone number/, 'an omitted optional phone is not listed');
+  });
+
+  it('adds signed Approve and Reject links that carry only the publishable testimonial', async () => {
+    const h = harness();
+    await h.handle(jsonPost({ ...FEEDBACK, phone: '+91 98765 43210', feedback: 'He said "wow" twice.\nThe Sohra homestay was wonderful.' }));
+    const [mail] = h.sent;
+    const approve = mail.text.match(/^Approve & publish: (\S+)$/m)?.[1] ?? '';
+    const reject = mail.text.match(/^Reject: (\S+)$/m)?.[1] ?? '';
+    assert.match(approve, /^https:\/\/neinsights\.in\/api\/feedback-review\?t=v1\.[\w.-]+&do=approve$/);
+    assert.match(reject, /&do=reject$/);
+    assert.ok(mail.html.includes('Approve &amp; publish') && mail.html.includes('✕ Reject'));
+    const claim = verifyReview(new URL(approve).searchParams.get('t')!, reviewKey(ENV)!);
+    assert.ok(claim);
+    assert.deepEqual(checkTestimonials([claim.entry]), [{
+      id: claim.entry.id, name: 'Rahul Sharma', rating: 5, text: 'He said "wow" twice.\nThe Sohra homestay was wonderful.',
+      journey: 'Custom Tour Packages (Meghalaya, Assam)', location: 'Delhi',
+    }]);
+    assert.match(claim.entry.id, /^rahul-sharma-2026-10-[a-z0-9]+$/);
+    assert.doesNotMatch(JSON.stringify(claim), /rahul@example\.com|98765/);
+    assert.equal(claim.expiresAt, NOW + 180 * 24 * 60 * 60 * 1000);
+  });
+
+  it('explains instead of offering Approve when the feedback cannot be published as submitted', async () => {
+    const h = harness();
+    await h.handle(jsonPost({ ...FEEDBACK, feedback: 'Lovely trip, please call me back on 98765 43210 about the next one.' }));
+    const [mail] = h.sent;
+    assert.doesNotMatch(mail.text, /Approve & publish:/);
+    assert.match(mail.text, /can’t be published on the website as submitted: .*phone number/);
   });
 
   it('does not require a phone number or any enquiry field, and validates the phone when given', async () => {

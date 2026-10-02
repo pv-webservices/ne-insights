@@ -114,20 +114,38 @@ const htmlValue = (label: string, value: string): string => {
   return safe.replace(/\n/g, '<br>');
 };
 
+/** Approve / Reject links for a feedback email, or the reason the feedback can't be published as submitted. */
+export type FeedbackReview = { approveUrl: string; rejectUrl: string } | { problem: string };
+
 interface EmailLayout {
   heading: string;
   subject: string;
   rows: Row[];
   /** Plain-text closing lines (escaped for the HTML version). */
   closing: string[];
+  /** Feedback only: the decision buttons, shown above the details. */
+  review?: FeedbackReview;
 }
+
+const BUTTON = 'display:inline-block;margin:0 8px 8px 0;padding:11px 20px;border-radius:8px;font-weight:bold;font-size:15px;text-decoration:none';
+const reviewHtml = (review: FeedbackReview | undefined): string => {
+  if (!review) return '';
+  if ('problem' in review) return `<tr><td style="padding:18px 24px 4px"><div style="padding:12px 14px;border-radius:8px;background:#fff8d9;color:#5c4200;font-size:14px">This feedback can’t be published on the website as submitted: ${escapeHtml(review.problem)}.</div></td></tr>`;
+  return `<tr><td style="padding:20px 24px 6px"><div style="font-size:15px;font-weight:bold;color:${NAVY};margin-bottom:12px">Show this feedback on the website?</div><a href="${escapeHtml(review.approveUrl)}" style="${BUTTON};background:#1d7a3e;color:#ffffff">✓ Approve &amp; publish</a><a href="${escapeHtml(review.rejectUrl)}" style="${BUTTON};border:2px solid #b42318;padding:9px 18px;color:#b42318">✕ Reject</a><div style="font-size:12.5px;color:#5a6478">Each button opens a review page where you confirm. Nothing is published until you do.</div></td></tr>`;
+};
+const reviewText = (review: FeedbackReview | undefined): string[] => {
+  if (!review) return [];
+  if ('problem' in review) return [`This feedback can’t be published on the website as submitted: ${review.problem}.`, ''];
+  return ['Show this feedback on the website? (Each link opens a review page where you confirm.)', `Approve & publish: ${review.approveUrl}`, `Reject: ${review.rejectUrl}`, ''];
+};
 
 const renderEmail = (layout: EmailLayout, details: EnquiryDetails, config: Pick<MailConfig, 'to' | 'from'>): MailMessage => {
   const name = headerSafe(asText(details.values.name), 80);
-  const { heading, subject, rows: table, closing } = layout;
+  const { heading, subject, rows: table, closing, review } = layout;
   const text = [
     `${heading} – ${SITE_NAME}`,
     '',
+    ...reviewText(review),
     ...table.map(([label, value]) => `${label}: ${value.includes('\n') ? `\n${value}` : value}`),
     '',
     ...closing,
@@ -135,7 +153,7 @@ const renderEmail = (layout: EmailLayout, details: EnquiryDetails, config: Pick<
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head><body style="margin:0;padding:24px;background:#f3f5f9;font-family:Arial,Helvetica,sans-serif;color:#1d2433">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #dde3ee">
 <tr><td style="background:${NAVY};padding:20px 24px;border-bottom:4px solid ${YELLOW}"><div style="color:${YELLOW};font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:bold">${SITE_NAME}</div><div style="color:#ffffff;font-size:20px;font-weight:bold;margin-top:4px">${escapeHtml(heading)}</div></td></tr>
-<tr><td style="padding:8px 24px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;line-height:1.5">
+${reviewHtml(review)}<tr><td style="padding:8px 24px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;line-height:1.5">
 ${table.map(([label, value]) => `<tr><th scope="row" align="left" valign="top" style="padding:10px 12px 10px 0;border-bottom:1px solid #eef1f6;width:34%;color:#5a6478;font-weight:600">${escapeHtml(label)}</th><td valign="top" style="padding:10px 0;border-bottom:1px solid #eef1f6">${htmlValue(label, value)}</td></tr>`).join('\n')}
 </table></td></tr>
 <tr><td style="padding:16px 24px 22px;font-size:13px;color:#5a6478">${closing.map(escapeHtml).join('<br>')}</td></tr>
@@ -155,15 +173,16 @@ const replyLine = (details: EnquiryDetails): string => `Reply to this email to a
 export const buildEnquiryEmail = (details: EnquiryDetails, config: Pick<MailConfig, 'to' | 'from'>): MailMessage =>
   renderEmail({ heading: 'New website enquiry', subject: buildSubject(details), rows: enquiryRows(details), closing: [replyLine(details)] }, details, config);
 
-export const buildFeedbackEmail = (details: EnquiryDetails, config: Pick<MailConfig, 'to' | 'from'>): MailMessage =>
+export const buildFeedbackEmail = (details: EnquiryDetails, config: Pick<MailConfig, 'to' | 'from'>, review?: FeedbackReview): MailMessage =>
   renderEmail(
     {
       heading: 'New traveller feedback',
       subject: buildFeedbackSubject(details),
       rows: feedbackRows(details),
+      review,
       closing: [
         replyLine(details),
-        'Nothing has been published. To feature this feedback on the website, follow “Publishing an approved testimonial” in docs/CONTENT_UPDATES.md. Never publish the email address or phone number.',
+        'Nothing is shown on the website unless you press “Approve & publish” and confirm. The email address and phone number are never published. Keep this email: its Reject button also removes the feedback later.',
       ],
     },
     details,
