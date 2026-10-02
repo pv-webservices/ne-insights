@@ -94,6 +94,8 @@ for(const route of routes){
     if(!byType('WebSite'))fail(url,'missing WebSite schema');
     if(url!=='/'&&!byType('BreadcrumbList'))fail(url,'inner page missing BreadcrumbList');
     if(url==='/faq/'&&!byType('FAQPage')?.mainEntity?.length)fail(url,'FAQ page missing FAQPage questions');
+    // Testimonials are for visitors: self-published review or rating markup is not eligible for rich results.
+    if(/"(Review|AggregateRating)"|"(aggregateRating|reviewCount|ratingValue)"/.test(block))fail(url,'JSON-LD must not contain Review/AggregateRating markup');
   }
 
   // Images
@@ -124,10 +126,11 @@ for(const route of routes){
   }
   for(const m of html.matchAll(/href="#([^"]+)"/g))if(!ids.get(url).has(m[1]))fail(url,`link to missing anchor #${m[1]}`);
 
-  // Forms post to the function and link the privacy policy
+  // Forms post to the function and link the privacy policy; feedback also needs a rating and permission to publish
   for(const form of html.match(/<form class="enquiry-form[\s\S]*?<\/form>/g)??[]){
+    const feedback=/data-rules="feedback"/.test(form);
     if(!/action="\/api\/enquiry" method="post"/.test(form))fail(url,'enquiry form must POST to /api/enquiry');
-    for(const name of ['name','email','phone','message','consent'])if(!new RegExp(`name="${name}"[^>]*required`).test(form))fail(url,`enquiry form field "${name}" must be required`);
+    for(const name of feedback?['name','email','rating','feedback','publish_consent','consent']:['name','email','phone','message','consent'])if(!new RegExp(`name="${name}"[^>]*required`).test(form))fail(url,`${feedback?'feedback':'enquiry'} form field "${name}" must be required`);
     if(!form.includes('href="/privacy-policy/"'))fail(url,'consent must link to the privacy policy');
   }
 }

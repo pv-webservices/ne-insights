@@ -52,3 +52,8 @@
   for = "/thank-you/*"
   [headers.values]
     X-Robots-Tag = "noindex"
+
+[[headers]]
+  for = "/feedback-thank-you/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

@@ -1,3 +1,41 @@
+# Publishing an approved testimonial
+
+The homepage "Traveller stories" section shows **only** testimonials that a developer has added to `src/data/testimonials.mjs`. Feedback sent through the "Share your experience" form is emailed to `operations@neinsights.in` and is **never** published automatically. While the list is empty, the homepage shows an invitation instead of a carousel.
+
+1. **Receive the feedback email.** Subject: `New traveller feedback from {Name} — {rating}/5`. (A `[Possible spam]` prefix means check it carefully first.)
+2. **Get NE Insights' approval** to feature this feedback.
+3. **Check the permission.** The email must say `Permission to publish: Yes`. If you're unsure which name or city the traveller wants shown, ask them by replying to the email.
+4. **Open `src/data/testimonials.mjs`** and add an entry inside the `testimonials` array:
+
+   ```js
+   export const testimonials = [
+     {
+       id: 'meghalaya-2026-10-rahul',   // unique, lowercase-hyphenated
+       name: 'Rahul S.',                // as the traveller agreed to be named
+       rating: 5,                       // the submitted rating, 1–5
+       text: 'The traveller’s own words, as approved.',
+       journey: 'Meghalaya journey',    // optional
+       location: 'Delhi',               // optional: the city they shared
+       date: 'October 2026',            // optional: month and year of the trip
+       featured: true                   // optional: shows first
+     }
+   ];
+   ```
+
+   Use the traveller's words. Fix obvious typos only, and shorten the text only with their agreement.
+5. **Never add the email address, phone number or anything else private.** The build fails if an entry has any field other than those above, or if the text looks like it contains an email address or phone number.
+6. **Build and test:** run `npm run build`, then `npm test` (or at least `npm run test:unit && npm run audit:seo`). Check the homepage with `npm run dev`. With two or more testimonials the carousel appears automatically.
+7. **Deploy:** commit and push to `main`. Netlify builds and publishes the site.
+
+To remove a testimonial (for example, if the traveller withdraws permission), delete its entry and deploy again. Do not add Review or AggregateRating structured data for these testimonials; the SEO audit fails if any appears.
+
+# Traveller stories and feedback form — 2 October 2026
+
+- New homepage section **Traveller stories**, between "Why travel with NE Insights" and "Moments waiting for you". It shows approved testimonials from `src/data/testimonials.mjs` (none yet, so it shows the invitation) and a **Share Your Experience** button.
+- The button opens a feedback form in an accessible dialog (shown inline without JavaScript). The fields are name, email, a 1–5 star rating, the traveller's experience, and optionally phone, city, journey/service and destinations. The form also has a separate, required permission to publish, as well as the privacy consent.
+- Submissions use the existing `POST /api/enquiry` function and Zoho SMTP with `form_type=feedback`. They have their own validation rules (phone is not required), email layout and noindex thank-you page, `/feedback-thank-you/`. All the existing spam protections apply.
+- The privacy policy now explains how feedback is handled and published.
+
 > **Note (1 October 2026):** the Word documents named below now live in `source-files/documents/` with lowercase-hyphenated names (for example `public/itinrerary/MANIPUR.docx` → `source-files/documents/itineraries/manipur.docx`), and images moved to `public/images/<folder>/` (generated from `source-files/images/`). The enquiry form now delivers directly to `operations@neinsights.in`. Paths below are as they were at the time.
 
 # Client revisions — 30 September 2026

@@ -62,6 +62,9 @@ check('Enquiry function is deployed (GET → 405)',getEndpoint.status===405,`sta
 const invalid=await get(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Origin:base},body:JSON.stringify({form_type:'contact',ts:String(Date.now()-60000)})});
 const invalidBody=await invalid.json().catch(()=>({}));
 check('Enquiry function validates (empty POST → 422, no email sent)',invalid.status===422&&invalidBody.code==='validation',`status ${invalid.status}`);
+const feedback=await get(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Origin:base},body:JSON.stringify({form_type:'feedback',ts:String(Date.now()-60000)})});
+const feedbackBody=await feedback.json().catch(()=>({}));
+check('Feedback form uses its own rules (empty POST → 422 with a rating error, no email sent)',feedback.status===422&&!!feedbackBody.errors?.rating&&!feedbackBody.errors?.phone,`status ${feedback.status}`);
 const foreign=await get(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Origin:'https://example.com'},body:'{}'});
 check('Enquiry function rejects other websites (→ 403)',foreign.status===403,`status ${foreign.status}`);
 

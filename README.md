@@ -6,6 +6,7 @@ Static, multi-page Northeast India travel website for **NE Insights Tours and Tr
 - **Hosting:** Netlify, auto-deployed from GitHub (`pv-webservices/ne-insights`, branch `main`).
 - **DNS:** GoDaddy (`ns65/ns66.domaincontrol.com`). **Email:** Zoho Mail, India data centre (`mx.zoho.in`), with SPF (`include:zoho.in`), DKIM (`zmail._domainkey`) and DMARC (`p=quarantine`) in place.
 - **Enquiries:** `POST /api/enquiry` (Netlify Function) → Zoho SMTP (`smtp.zoho.in:465`) → `operations@neinsights.in`. No third-party form service.
+- **Traveller feedback:** the homepage "Share your experience" form uses the same function (`form_type=feedback`) and mailbox. Nothing is published automatically. Approved testimonials are added by hand to `src/data/testimonials.mjs` (see `docs/CONTENT_UPDATES.md`). There is no testimonial database.
 
 ## Commands
 
@@ -38,10 +39,12 @@ ne-insights/
 │   ├── pages.mjs              Page templates (home, about, services, legal, 404, thank-you…)
 │   ├── package-pages.mjs      Tour package collection and detail templates
 │   ├── components/ui.mjs      Header, footer, cards, responsive <picture> helper
-│   ├── components/forms.mjs   Enquiry forms (work without JavaScript)
-│   ├── lib/enquiry-rules.mjs  Field rules and messages shared by forms, browser and server
+│   ├── components/forms.mjs   Enquiry and feedback forms (work without JavaScript)
+│   ├── components/testimonials.mjs  "Traveller stories" section, feedback dialog, testimonial checks
+│   ├── lib/enquiry-rules.mjs  Field rules and messages (enquiry and feedback) shared by forms, browser and server
 │   ├── seo/schema.mjs         JSON-LD (TravelAgency, WebSite, WebPage, BreadcrumbList, FAQPage…)
 │   ├── data/                  site.mjs (contact details), company.mjs (about copy), packages.mjs,
+│   │                          testimonials.mjs (approved testimonials only, added by hand),
 │   │                          image-manifest.json (generated), image-credits.json, brand.mjs
 │   └── styles/main.css
 ├── public/                    Copied to dist/ as-is
@@ -107,6 +110,6 @@ Redirects are generated into `dist/_redirects`: `www`/`http` → `https://neinsi
 
 ## Content still to confirm with the client
 
-`src/data/site.mjs`: office address and business hours (`address`, `hours`); founder details (`founder`, which enables the Person schema); `legalApproved` (removes the "draft for business review" note on the legal pages). Social profile URLs go in `socials`. Do not add testimonials, response times or results unless the client supplies them.
+`src/data/site.mjs`: office address and business hours (`address`, `hours`); founder details (`founder`, which enables the Person schema); `legalApproved` (removes the "draft for business review" note on the legal pages). Social profile URLs go in `socials`. Do not add response times or results unless the client supplies them. Add testimonials only when they are genuine, approved and permitted, following `docs/CONTENT_UPDATES.md`. Never write sample reviews into `src/data/testimonials.mjs`.
 
 Fonts and images are served locally. Regional photographs are from Wikimedia Commons; credits and licences are listed at `/image-credits/`.

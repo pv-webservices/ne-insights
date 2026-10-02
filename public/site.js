@@ -257,8 +257,8 @@ if (filters) {
 }
 
 
-/* ---------- Enquiry forms ----------
-   Without JavaScript the forms POST to /api/enquiry and the server redirects to /thank-you/.
+/* ---------- Enquiry and feedback forms ----------
+   Without JavaScript the forms POST to /api/enquiry and the server redirects to the thank-you page.
    With JavaScript: inline validation (rules shared with the server), background sending with a
    20-second timeout, error states that never clear the visitor's entries, and a WhatsApp option. */
 const rulesScript = document.getElementById('enquiry-rules');
@@ -267,8 +267,15 @@ const REQUEST_TIMEOUT_MS = 20000;
 const WHATSAPP_TEXT_LIMIT = 1500;
 const EMAIL_PATTERN = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:".]+(\.[^\s@<>()[\]\\,;:".]+)+$/;
 const PHONE_CHARACTERS = /^[+()\-.\s0-9]+$/;
-const DRAFT_EXCLUDE = new Set(['ts', 'page', 'website', 'consent', 'form_type']);
-const SUMMARY_LABELS = [['name', 'Name'], ['phone', 'Phone'], ['email', 'Email'], ['date', 'Travel date'], ['adults', 'Travellers'], ['destinations', 'Destinations'], ['message', 'Message']];
+// Consent ticks are never restored from a draft: the visitor must give them again.
+const DRAFT_EXCLUDE = new Set(['ts', 'page', 'website', 'consent', 'publish_consent', 'form_type']);
+/** Wording and the summary used for the WhatsApp/email alternatives, per rule set (data-rules on the form). */
+const FORM_COPY = {
+  enquiry: { noun: 'enquiry', greeting: (topic) => `Hello NE Insights, I would like to enquire${topic ? ` about ${topic}` : ''}.`, mailSubject: 'Travel enquiry', fallback: '/thank-you/',
+    labels: [['name', 'Name'], ['phone', 'Phone'], ['email', 'Email'], ['date', 'Travel date'], ['adults', 'Travellers'], ['destinations', 'Destinations'], ['message', 'Message']] },
+  feedback: { noun: 'feedback', greeting: () => 'Hello NE Insights, I would like to share feedback about my trip.', mailSubject: 'Traveller feedback', fallback: '/feedback-thank-you/',
+    labels: [['name', 'Name'], ['rating', 'Rating (out of 5)'], ['journey', 'Journey'], ['destinations', 'Destinations'], ['city', 'City'], ['feedback', 'Feedback']] },
+};
 
 const sessionStore = (() => {
   try { const store = window.sessionStorage; store.setItem('__ne', '1'); store.removeItem('__ne'); return store; } catch { return null; }
@@ -300,7 +307,10 @@ const checkValue = (rule, value) => {
 };
 
 const initEnquiryForm = (form) => {
-  const { fields: rules, phone, email, whatsapp } = enquiryConfig;
+  const { phone, email, whatsapp } = enquiryConfig;
+  const kind = form.dataset.rules === 'feedback' ? 'feedback' : 'enquiry';
+  const rules = enquiryConfig.fields[kind];
+  const copy = FORM_COPY[kind];
   const status = form.querySelector('[data-form-status]');
   const submit = form.querySelector('[data-submit]');
   const submitLabel = form.querySelector('[data-submit-label]');
@@ -323,7 +333,8 @@ const initEnquiryForm = (form) => {
   const valueOf = (name) => {
     const els = controls(name);
     if (!els.length) return null;
-    if (els[0].type === 'checkbox') return name === 'consent' ? (els[0].checked ? 'on' : '') : els.filter(el => el.checked).map(el => el.value);
+    if (els[0].type === 'radio') return els.find(el => el.checked)?.value || '';
+    if (els[0].type === 'checkbox') return rules[name]?.format === 'consent' ? (els[0].checked ? 'on' : '') : els.filter(el => el.checked).map(el => el.value);
     return els[0].value.trim();
   };
   const collect = () => {
@@ -347,12 +358,14 @@ const initEnquiryForm = (form) => {
       const els = controls(name);
       if (!els.length) continue;
       if (Array.isArray(value)) els.forEach(el => { el.checked = value.includes(el.value); });
+      else if (els[0].type === 'radio') els.forEach(el => { el.checked = el.value === value; });
       else if (typeof value === 'string' && value) els[0].value = value;
     }
   };
   restoreDraft();
 
-  const interest = new URLSearchParams(location.search).get('interest');
+  // ?interest= pre-fills enquiries only (feedback has no message or topic to fill).
+  const interest = kind === 'enquiry' ? new URLSearchParams(location.search).get('interest') : null;
   if (interest) {
     const topic = interest.slice(0, 150);
     form.elements.topic.value = topic;
@@ -387,9 +400,8 @@ const initEnquiryForm = (form) => {
 
   const summaryText = () => {
     const data = collect();
-    const lines = SUMMARY_LABELS.map(([key, label]) => [label, Array.isArray(data[key]) ? data[key].join(', ') : data[key]]).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
-    const topic = data.topic ? ` about ${data.topic}` : '';
-    return [`Hello NE Insights, I would like to enquire${topic}.`, ...lines].join('\n').slice(0, WHATSAPP_TEXT_LIMIT);
+    const lines = copy.labels.map(([key, label]) => [label, Array.isArray(data[key]) ? data[key].join(', ') : data[key]]).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
+    return [copy.greeting(data.topic), ...lines].join('\n').slice(0, WHATSAPP_TEXT_LIMIT);
   };
   const link = (text, href, external = false) => {
     const a = document.createElement('a');
@@ -423,7 +435,7 @@ const initEnquiryForm = (form) => {
       const p = document.createElement('p');
       p.className = 'form-status-alt';
       const body = summaryText();
-      p.append('Reach us directly: ', link(`call ${phone}`, `tel:${phone.replace(/\s/g, '')}`), ', ', link('WhatsApp', `https://wa.me/${whatsapp}?text=${encodeURIComponent(body)}`, true), ' or ', link(`email ${email}`, `mailto:${email}?subject=${encodeURIComponent('Travel enquiry')}&body=${encodeURIComponent(body)}`), '.');
+      p.append('Reach us directly: ', link(`call ${phone}`, `tel:${phone.replace(/\s/g, '')}`), ', ', link('WhatsApp', `https://wa.me/${whatsapp}?text=${encodeURIComponent(body)}`, true), ' or ', link(`email ${email}`, `mailto:${email}?subject=${encodeURIComponent(copy.mailSubject)}&body=${encodeURIComponent(body)}`), '.');
       parts.push(p);
     }
     status.replaceChildren(...parts);
@@ -438,9 +450,11 @@ const initEnquiryForm = (form) => {
   };
   const showOffline = () => showStatus('warning', 'You appear to be offline.', 'Your details are safe in this form. Reconnect to the internet and press Send again, or contact us directly.', { alternatives: true });
 
+  // Tick boxes and the star rating are checked on change; arrowing through the stars must not raise errors.
+  const isChoice = (el) => el.type === 'checkbox' || el.type === 'radio';
   form.addEventListener('focusout', (e) => {
     const name = e.target.name;
-    if (!rules[name] || e.target.type === 'checkbox') return;
+    if (!rules[name] || isChoice(e.target)) return;
     if (attempted || valueOf(name)) validateField(name);
   });
   form.addEventListener('input', (e) => {
@@ -449,7 +463,11 @@ const initEnquiryForm = (form) => {
     clearTimeout(draftTimer);
     draftTimer = setTimeout(saveDraft, 300);
   });
-  form.addEventListener('change', (e) => { if (e.target.name === 'consent' && attempted) validateField('consent'); saveDraft(); });
+  form.addEventListener('change', (e) => {
+    const name = e.target.name;
+    if (rules[name] && isChoice(e.target) && (attempted || box(name)?.classList.contains('has-error'))) validateField(name);
+    saveDraft();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -474,7 +492,7 @@ const initEnquiryForm = (form) => {
     } catch (error) {
       clearTimeout(timer);
       setSending(false);
-      if (error.name === 'AbortError') showStatus('warning', 'This is taking longer than expected.', 'We stopped waiting after 20 seconds, so your enquiry may not have been sent. Your details are still in the form. Please try again in a moment, or contact us directly.', { alternatives: true });
+      if (error.name === 'AbortError') showStatus('warning', 'This is taking longer than expected.', `We stopped waiting after 20 seconds, so your ${copy.noun} may not have been sent. Your details are still in the form. Please try again in a moment, or contact us directly.`, { alternatives: true });
       else if (navigator.onLine === false) showOffline();
       else showStatus('error', 'We couldn’t reach our server.', 'Please check your connection and try again. Your details are still in the form.', { alternatives: true });
       status.focus();
@@ -486,7 +504,7 @@ const initEnquiryForm = (form) => {
       sent = true;
       clearTimeout(draftTimer);
       clearDraft();
-      location.assign(body.redirect || '/thank-you/');
+      location.assign(body.redirect || copy.fallback);
       return;
     }
     setSending(false);
@@ -498,7 +516,7 @@ const initEnquiryForm = (form) => {
       return;
     }
     if (response.status === 429) showStatus('warning', 'Please wait a few minutes.', body.message || 'You have sent several enquiries in a short time.', { alternatives: true });
-    else showStatus('error', 'Your enquiry was not sent.', body.message || 'Something went wrong on our side. Your details are still in the form.', { alternatives: true });
+    else showStatus('error', `Your ${copy.noun} was not sent.`, body.message || 'Something went wrong on our side. Your details are still in the form.', { alternatives: true });
     status.focus();
   });
 
@@ -513,3 +531,38 @@ const initEnquiryForm = (form) => {
 };
 
 if (enquiryConfig) document.querySelectorAll('[data-enquiry]').forEach(initEnquiryForm);
+
+/* ---------- "Share your experience" dialog ----------
+   Native modal <dialog>: the rest of the page is inert while it is open, Escape closes it and focus
+   returns to the button that opened it. Without JavaScript or <dialog> support the form is shown
+   inline and the button is a plain link to it. */
+const feedbackDialog = document.querySelector('[data-feedback-dialog]');
+if (feedbackDialog && typeof feedbackDialog.showModal !== 'function') document.documentElement.classList.add('no-dialog');
+else if (feedbackDialog) {
+  let opener = null;
+  let pressedBackdrop = false;
+  const open = (trigger) => {
+    opener = trigger;
+    feedbackDialog.showModal();
+    document.body.classList.add('dialog-open');
+    // Start at the first field rather than the close button; honeypot and hidden inputs are skipped.
+    feedbackDialog.querySelector('form input:not([type="hidden"]):not([tabindex="-1"])')?.focus();
+  };
+  feedbackDialog.addEventListener('close', () => {
+    document.body.classList.remove('dialog-open');
+    opener?.focus();
+  });
+  document.querySelectorAll('[data-feedback-open]').forEach(trigger => {
+    trigger.setAttribute('role', 'button');
+    trigger.setAttribute('aria-haspopup', 'dialog');
+    trigger.setAttribute('aria-controls', feedbackDialog.id);
+    trigger.addEventListener('click', e => { e.preventDefault(); open(trigger); });
+    // role="button" promises Space as well as Enter.
+    trigger.addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); open(trigger); } });
+  });
+  feedbackDialog.querySelector('[data-feedback-close]')?.addEventListener('click', () => feedbackDialog.close());
+  // The panel fills the dialog, so a press that starts and ends on the dialog itself is on the backdrop.
+  // (Checking both ends stops a text selection dragged outside the panel from closing it.)
+  feedbackDialog.addEventListener('pointerdown', e => { pressedBackdrop = e.target === feedbackDialog; });
+  feedbackDialog.addEventListener('click', e => { if (pressedBackdrop && e.target === feedbackDialog) feedbackDialog.close(); pressedBackdrop = false; });
+}

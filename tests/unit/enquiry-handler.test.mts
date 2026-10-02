@@ -328,3 +328,150 @@ describe('without JavaScript (plain HTML form post)', () => {
     assert.match(h.sent[0].text, /Source page: https:\/\/neinsights\.in\/contact\//);
   });
 });
+
+// Traveller feedback shares the endpoint, transport and protections but has its own rules, email and thank-you page.
+const FEEDBACK = {
+  form_type: 'feedback',
+  name: 'Rahul Sharma',
+  email: 'rahul@example.com',
+  rating: '5',
+  feedback: 'Our driver knew every viewpoint around Shillong and the homestay in Sohra was wonderful.',
+  journey: 'Custom Tour Packages',
+  destinations: ['Meghalaya', 'Assam'],
+  city: 'Delhi',
+  publish_consent: 'on',
+  consent: 'on',
+  website: '',
+  ts: String(NOW - 60_000),
+  page: 'https://neinsights.in/',
+};
+
+describe('traveller feedback', () => {
+  it('emails the feedback with a rating subject, publication permission and the visitor as Reply-To', async () => {
+    const h = harness();
+    const res = await h.handle(jsonPost(FEEDBACK));
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true, redirect: '/feedback-thank-you/' });
+    const [mail] = h.sent;
+    assert.equal(mail.subject, 'New traveller feedback from Rahul Sharma — 5/5');
+    assert.deepEqual(mail.from, { name: 'Rahul Sharma via NE Insights', address: 'operations@neinsights.in' });
+    assert.deepEqual(mail.replyTo, { name: 'Rahul Sharma', address: 'rahul@example.com' });
+    assert.equal(mail.to, 'operations@neinsights.in');
+    for (const expected of ['New traveller feedback', 'Traveller feedback', 'Rahul Sharma', 'rahul@example.com', '★★★★★ 5/5', 'Custom Tour Packages', 'Meghalaya, Assam', 'Delhi', 'homestay in Sohra', 'Permission to publish', 'Privacy consent', 'https://neinsights.in/', 'Thursday, 1 October 2026', 'Nothing has been published']) {
+      assert.ok(mail.text.includes(expected), `text should include ${expected}`);
+      assert.ok(mail.html.includes(expected), `html should include ${expected}`);
+    }
+    assert.doesNotMatch(mail.text, /Phone number/, 'an omitted optional phone is not listed');
+  });
+
+  it('does not require a phone number or any enquiry field, and validates the phone when given', async () => {
+    assert.equal((await harness().handle(jsonPost({ ...FEEDBACK, journey: '', destinations: [], city: '' }))).status, 200);
+    assert.equal((await harness().handle(jsonPost({ ...FEEDBACK, phone: '+91 98765 43210' }))).status, 200);
+    const bad = await harness().handle(jsonPost({ ...FEEDBACK, phone: '12345' }));
+    assert.equal(bad.status, 422);
+    assert.deepEqual(Object.keys((await bad.json()).errors), ['phone']);
+  });
+
+  it('returns field errors for exactly the required feedback fields', async () => {
+    const h = harness();
+    const res = await h.handle(jsonPost({ form_type: 'feedback', ts: FEEDBACK.ts }));
+    assert.equal(res.status, 422);
+    const { errors } = await res.json();
+    assert.deepEqual(Object.keys(errors).sort(), ['consent', 'email', 'feedback', 'name', 'publish_consent', 'rating']);
+    assert.equal(errors.rating, 'Choose a star rating.');
+    assert.match(errors.publish_consent, /publish your feedback/);
+    assert.equal(h.sent.length, 0);
+  });
+
+  it('rejects ratings that are not a whole number from 1 to 5', async () => {
+    for (const rating of ['0', '6', '4.5', '-1', 'five', '5 stars', ' ']) {
+      const res = await harness().handle(jsonPost({ ...FEEDBACK, rating }));
+      assert.equal(res.status, 422, `rating "${rating}" should be rejected`);
+      assert.ok((await res.json()).errors.rating, `rating "${rating}" should have a rating error`);
+    }
+    for (const rating of ['1', '3', '5']) assert.equal((await harness().handle(jsonPost({ ...FEEDBACK, rating }))).status, 200, `rating ${rating}`);
+  });
+
+  it('rejects malformed feedback fields', async () => {
+    const cases: [Record<string, unknown>, string, RegExp][] = [
+      [{ feedback: 'Too short.' }, 'feedback', /at least 20 characters/],
+      [{ feedback: 'x'.repeat(2001) }, 'feedback', /2000 characters or fewer/],
+      [{ journey: 'Space tourism' }, 'journey', /option from the list/],
+      [{ destinations: ['Atlantis'] }, 'destinations', /option from the list/],
+      [{ city: 'x'.repeat(81) }, 'city', /80 characters or fewer/],
+      [{ email: 'rahul@example' }, 'email', /valid email/],
+      [{ publish_consent: 'no' }, 'publish_consent', /publish your feedback/],
+      [{ consent: '' }, 'consent', /privacy notice/],
+    ];
+    for (const [override, field, pattern] of cases) {
+      const res = await harness().handle(jsonPost({ ...FEEDBACK, ...override }));
+      assert.equal(res.status, 422, `${JSON.stringify(override).slice(0, 60)} should be rejected`);
+      assert.match((await res.json()).errors[field], pattern);
+    }
+  });
+
+  it('keeps line breaks in the feedback, escapes HTML and blocks header injection through the name', async () => {
+    const renderer = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'unix' });
+    let raw = '';
+    const h = harness({ transport: async (message) => { h.sent.push(message); const info = await renderer.sendMail(message); raw = (info.message as Buffer).toString('utf8'); return info; } });
+    const res = await h.handle(jsonPost({ ...FEEDBACK, name: 'Eve\r\nBcc: attacker@example.com', feedback: 'Line one <script>alert(1)</script>\nLine two & more "quotes" here.' }));
+    assert.equal(res.status, 200);
+    const [mail] = h.sent;
+    assert.ok(mail.html.includes('Line one &lt;script&gt;alert(1)&lt;/script&gt;<br>Line two &amp; more &quot;quotes&quot; here.'));
+    assert.ok(!mail.html.includes('<script>'));
+    const headers = raw.split('\n\n')[0];
+    assert.doesNotMatch(headers, /^Bcc:/im);
+    assert.equal(headers.match(/^Subject:/gim)?.length, 1);
+  });
+
+  it('flags suspicious feedback in the subject but still delivers it', async () => {
+    const h = harness();
+    await h.handle(jsonPost({ ...FEEDBACK, feedback: 'Great trip! Also, we offer cheap SEO and backlinks for your travel website.' }));
+    assert.equal(h.sent.length, 1);
+    assert.equal(h.sent[0].subject, '[Possible spam] New traveller feedback from Rahul Sharma — 5/5');
+  });
+
+  it('silently discards honeypot and too-fast feedback with the feedback success response', async () => {
+    const h = harness();
+    const honeypot = await h.handle(jsonPost({ ...FEEDBACK, website: 'https://spam.example' }));
+    assert.deepEqual(await honeypot.json(), { ok: true, redirect: '/feedback-thank-you/' });
+    const fast = await h.handle(jsonPost({ ...FEEDBACK, ts: String(NOW - 1000) }));
+    assert.deepEqual(await fast.json(), { ok: true, redirect: '/feedback-thank-you/' });
+    assert.equal(h.sent.length, 0);
+  });
+
+  it('shares the per-IP rate limit and origin check with enquiries', async () => {
+    const h = harness();
+    for (let i = 0; i < 3; i++) assert.equal((await h.handle(jsonPost(VALID))).status, 200);
+    for (let i = 0; i < 2; i++) assert.equal((await h.handle(jsonPost(FEEDBACK))).status, 200);
+    const limited = await h.handle(jsonPost(FEEDBACK));
+    assert.equal(limited.status, 429);
+    assert.equal((await limited.json()).code, 'rate_limited');
+    assert.equal((await harness().handle(jsonPost(FEEDBACK, { Origin: 'https://evil.example' }))).status, 403);
+  });
+
+  it('works without JavaScript: 303 to /feedback-thank-you/, and an HTML error page that says feedback', async () => {
+    const h = harness();
+    const { ts: _omitted, ...fields } = FEEDBACK;
+    const res = await h.handle(formPost(fields));
+    assert.equal(res.status, 303);
+    assert.equal(res.headers.get('location'), '/feedback-thank-you/');
+    assert.match(h.sent[0].text, /Where you travelled: Meghalaya, Assam/);
+    assert.match(h.sent[0].text, /Form timer not available/);
+
+    const failing = harness({ transport: async () => { throw new Error('down'); } });
+    const error = await failing.handle(formPost(fields));
+    assert.equal(error.status, 502);
+    const html = await error.text();
+    assert.match(html, /Your feedback was not sent/);
+    assert.match(html, /couldn’t deliver your feedback/);
+  });
+
+  it('never applies feedback rules to other form types (enquiry rules stay the default)', async () => {
+    const res = await harness().handle(jsonPost({ ...FEEDBACK, form_type: 'contact' }));
+    assert.equal(res.status, 422);
+    assert.deepEqual(Object.keys((await res.json()).errors).sort(), ['message', 'phone']);
+    const unknown = await harness().handle(jsonPost({ ...VALID, form_type: 'something-else' }));
+    assert.deepEqual(await unknown.json(), { ok: true, redirect: '/thank-you/' });
+  });
+});

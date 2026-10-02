@@ -48,7 +48,7 @@ const lastModified=files=>{
 const SHARED=['src/components/ui.mjs','src/data/site.mjs'];
 const SRC={
   pages:[...SHARED,'src/pages.mjs'],
-  home:[...SHARED,'src/pages.mjs','src/data/company.mjs','src/components/forms.mjs'],
+  home:[...SHARED,'src/pages.mjs','src/data/company.mjs','src/components/forms.mjs','src/components/testimonials.mjs','src/data/testimonials.mjs'],
   about:[...SHARED,'src/pages.mjs','src/data/company.mjs'],
   forms:[...SHARED,'src/pages.mjs','src/components/forms.mjs'],
   packages:[...SHARED,'src/package-pages.mjs','src/data/packages.mjs']
@@ -90,6 +90,7 @@ const plain=s=>String(s).replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').trim();
 add('/image-credits/',{index:false,title:'Photography & Image Credits',description:'Credits and licence information for the regional photographs and illustrative imagery used on the NE Insights website.',body:`${pageHero('The places behind the pictures.','Regional photography and the people who made it possible.','hero','IMAGE CREDITS')}${breadcrumbs([['Image credits']])}<section class="section"><div class="container prose"><h2>Photography with a sense of place</h2><p>Wikimedia Commons photographs are used under the licences linked below. Images have been resized and converted to AVIF and WebP, and are displayed with responsive crops. Adapted photographs remain subject to their original share-alike licence where applicable.</p><ul class="credits-list">${credits.map(c=>`<li><a href="${esc(c.source)}" target="_blank" rel="noopener noreferrer">${esc(c.file)}</a><small>Photography: ${esc(plain(c.artist))} · <a href="${esc(c.licenseUrl)}">${esc(c.license)}</a></small></li>`).join('')}</ul><h2>Brand and illustrative imagery</h2><p>The NE Insights logo is the original brand artwork supplied by the business. The Tour Operators Association of Assam (TOAA) logo is displayed to show NE Insights’ associate membership of the association.</p><p>Some scenes are AI-generated illustrative images created for this website: the winding hill-road hero, the tiger safari banner, the traveller viewpoint, the Mizoram ridgeline, Loktak Lake, the village walk, the hillside homestay and the vehicle category photos. They convey the character of the region and do not depict a specific confirmed property, vehicle, guide or wildlife sighting.</p></div></section>`});
 add('/sitemap/',{index:false,title:'Website Sitemap',description:'Find every destination guide, itinerary, service and information page on the NE Insights website, all in one place.',body:`${pageHero('Find your way.','Every journey and every useful detail, all in one place.','hero','SITEMAP')}${breadcrumbs([['Sitemap']])}<section class="section"><div class="container"><h2 class="sr-only">All pages</h2><ul class="sitemap-links">${routes.filter(r=>r.index).map(r=>`<li><a href="${r.url}">${esc(r.title)}</a></li>`).join('')}</ul></div></section>`});
 add('/thank-you/',{index:false,title:'Thank You for Your Enquiry',description:'Thank you for contacting NE Insights. Your Northeast India travel enquiry has been sent and our team will reply by email or phone.',body:pages.thankYouPage(),img:'traveller'});
+add('/feedback-thank-you/',{index:false,title:'Thank You for Your Feedback',description:'Thank you for sharing your NE Insights travel experience. Our team reviews every submission before anything is featured on the website.',body:pages.feedbackThankYouPage(),img:'traveller'});
 add('/404.html',{index:false,title:'Page Not Found',description:'The page you requested could not be found. Return to NE Insights and explore Northeast India destinations, tours and services.',body:pages.notFound()});
 
 /** Visible breadcrumb trail → [name, absolute URL] pairs (used for BreadcrumbList). */
@@ -108,7 +109,8 @@ for(const entry of await readdir(dist))await rm(path.join(dist,entry),{recursive
 await mkdir(path.join(root,'output'),{recursive:true});
 await cp(path.join(root,'public'),dist,{recursive:true,filter:source=>path.basename(source)!=='site.js'});
 const hashed=async(source,name,ext)=>{
-  const content=await readFile(path.join(root,source));
+  // Normalise line endings so Windows (CRLF checkout) and Netlify (LF) builds get the same hash.
+  const content=(await readFile(path.join(root,source),'utf8')).replace(/\r\n/g,'\n');
   const hash=createHash('sha256').update(content).digest('hex').slice(0,10);
   const file=`/assets/${name}.${hash}.${ext}`;
   await mkdir(path.join(dist,'assets'),{recursive:true});
