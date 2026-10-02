@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 interface Route { url: string; index: boolean }
 const { routes } = JSON.parse(readFileSync(new URL('../../output/routes.json', import.meta.url), 'utf8')) as { routes: Route[] };
 const PAGES = routes.filter((r) => r.url !== '/404.html').map((r) => r.url);
-const KEY_PAGES = ['/', '/destinations/meghalaya/', '/tour-packages/', '/tour-packages/summer-ne-07/', '/contact/', '/plan-my-trip/', '/about/', '/thank-you/'];
+const KEY_PAGES = ['/', '/destinations/meghalaya/', '/tour-packages/', '/tour-packages/summer-ne-07/', '/contact/', '/plan-my-trip/', '/about/', '/thank-you/', '/feedback/'];
 const WIDTHS = [320, 375, 768, 1024, 1440];
 const MIN_TARGET = 24; // WCAG 2.2 AA (2.5.8) minimum target size in CSS pixels
 
@@ -100,7 +100,9 @@ test.describe('responsive layout', () => {
               const box = el.getBoundingClientRect();
               if (style.visibility === 'hidden' || style.display === 'none' || box.width === 0 || el.closest('[hidden], .honeypot, [aria-hidden="true"], .dropdown, .nav-panel-head, .nav-panel-foot, .wa-panel')) return false;
               if (inline(el)) return false; // links inside sentences are exempt (WCAG 2.5.8 inline exception)
-              if ((el as HTMLInputElement).type === 'checkbox') { const label = el.closest('label'); if (label && label.getBoundingClientRect().height >= min) return false; }
+              // Tick boxes and radios (e.g. the star rating) are operated through their label, which is the real target.
+              const input = el as HTMLInputElement;
+              if (input.type === 'checkbox' || input.type === 'radio') { const label = input.labels?.[0]; if (label && label.getBoundingClientRect().height >= min && label.getBoundingClientRect().width >= min) return false; }
               return box.width < min || box.height < min;
             })
             .map((el) => `${el.tagName.toLowerCase()}${el.className ? '.' + String(el.className).split(' ')[0] : ''} ${Math.round(el.getBoundingClientRect().width)}×${Math.round(el.getBoundingClientRect().height)} "${(el.textContent || (el as HTMLInputElement).name || '').trim().slice(0, 30)}"`);

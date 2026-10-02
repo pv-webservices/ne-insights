@@ -3,7 +3,7 @@
 // The entries below are TEST FIXTURES ONLY; they never appear on the website.
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { checkTestimonials, travellerStories } from '../../src/components/testimonials.mjs';
+import { checkTestimonials, feedbackPageContent, travellerStories } from '../../src/components/testimonials.mjs';
 import { testimonials } from '../../src/data/testimonials.mjs';
 
 const FIXTURE = { id: 'fixture-one', name: 'Test Traveller', rating: 4, text: 'Fixture text used only by the unit tests.', journey: 'Fixture journey', location: 'Fixture City', date: 'October 2026' };
@@ -62,6 +62,23 @@ describe('traveller stories section', () => {
     assert.match(dialog, /does not guarantee publication/);
     assert.doesNotMatch(dialog, /name="phone"[^>]*required/);
     assert.doesNotMatch(dialog, /name="message"/);
+  });
+});
+
+describe('shareable feedback page', () => {
+  it('shows the form inline and leaves out the stories grid when there are no approved testimonials', () => {
+    const html = feedbackPageContent([]);
+    assert.match(html, /id="form-feedback"/);
+    assert.match(html, /aria-labelledby="feedback-page-title"/);
+    assert.doesNotMatch(html, /<dialog/);
+    assert.doesNotMatch(html, /story-card|story-grid/);
+  });
+
+  it('lists every approved testimonial in a grid below the form', () => {
+    const html = feedbackPageContent([FIXTURE, { ...FIXTURE, id: 'fixture-two' }, { ...FIXTURE, id: 'fixture-three' }]);
+    assert.match(html, /class="story-grid"/);
+    assert.equal(html.match(/<figure class="story-card"/g)?.length, 3);
+    assert.ok(html.indexOf('id="form-feedback"') < html.indexOf('story-grid'));
   });
 });
 

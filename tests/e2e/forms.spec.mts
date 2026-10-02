@@ -231,5 +231,6 @@ test('end to end through the local function (preview transport writes the email 
   await page.waitForTimeout(3100); // the server discards submissions made within 3 s of page load
   await page.getByRole('button', { name: 'Send message' }).click();
   // The real local function renders the email with nodemailer; allow for a slow machine.
-  await expect(page, await page.locator('#form-contact [data-form-status]').innerText().catch(() => '')).toHaveURL(/\/thank-you\/$/, { timeout: 20_000 });
+  // The status text is only a failure hint; if the page has already moved on it is gone, so don't wait for it.
+  await expect(page, await page.locator('#form-contact [data-form-status]').innerText({ timeout: 1000 }).catch(() => '')).toHaveURL(/\/thank-you\/$/, { timeout: 20_000 });
 });

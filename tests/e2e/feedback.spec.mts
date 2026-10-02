@@ -209,6 +209,52 @@ test.describe('feedback dialog', () => {
   });
 });
 
+test.describe('shareable /feedback/ page', () => {
+  test('shows the form directly (no dialog), is noindex and is linked from the footer', async ({ page, request }) => {
+    await page.goto('/feedback/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tell us about your journey.');
+    await expect(page.locator('#form-feedback')).toBeVisible();
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+    await expect(page.locator('.story-card')).toHaveCount(0); // no approved testimonials yet
+    const sitemap = await (await request.get('/sitemap-pages.xml')).text();
+    expect(sitemap).not.toContain('/feedback/');
+    await page.goto('/about/');
+    await expect(page.locator('footer').getByRole('link', { name: 'Share your experience' })).toHaveAttribute('href', '/feedback/');
+  });
+
+  test('validates, sends form_type=feedback and lands on the feedback thank-you page', async ({ page }) => {
+    let payload: Record<string, unknown> = {};
+    await page.route('**/api/enquiry', async (route) => { payload = route.request().postDataJSON(); await respond(200, { ok: true, redirect: '/feedback-thank-you/' })(route); });
+    await page.goto('/feedback/');
+    await enhanced(page);
+    await page.getByRole('button', { name: 'Send my feedback' }).click();
+    await expect(statusBox(page)).toContainText('Please correct 6 fields');
+    await expect(page.locator('#feedback-name')).toBeFocused();
+    await fillFeedback(page);
+    await page.getByRole('button', { name: 'Send my feedback' }).click();
+    await expect(page).toHaveURL(/\/feedback-thank-you\/$/);
+    expect(payload).toMatchObject({ form_type: 'feedback', rating: '5', publish_consent: 'on', consent: 'on' });
+    expect(String(payload.page)).toContain('/feedback/');
+  });
+
+  test('works without JavaScript', async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.route('**/api/enquiry', (route) => route.fulfill({ status: 303, headers: { Location: '/feedback-thank-you/' } }));
+    await page.goto('/feedback/');
+    await page.locator('#feedback-name').fill(TRAVELLER.name);
+    await page.locator('#feedback-email').fill(TRAVELLER.email);
+    await page.locator('label[for="feedback-rating-5"]').click();
+    await page.locator('#feedback-feedback').fill(TRAVELLER.feedback);
+    await page.locator('#feedback-publish_consent').check();
+    await page.locator('#feedback-consent').check();
+    await page.getByRole('button', { name: 'Send my feedback' }).click();
+    await expect(page).toHaveURL(/\/feedback-thank-you\/$/);
+    await context.close();
+  });
+});
+
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 

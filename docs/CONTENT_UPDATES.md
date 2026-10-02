@@ -1,6 +1,12 @@
+# Collecting traveller feedback
+
+Send travellers this link after their trip: **<https://neinsights.in/feedback/>**. It opens the "Share your experience" form directly (no pop-up), so it works well on WhatsApp and in email. The same form is also on the homepage (Share Your Experience button) and linked in every page footer. The page is kept out of search results (`noindex`), and approved testimonials appear on it, below the form, once they've been added.
+
+Example message: *"Thank you for travelling with NE Insights! We'd love to hear how your trip went. It takes two minutes: https://neinsights.in/feedback/"*
+
 # Publishing an approved testimonial
 
-The homepage "Traveller stories" section shows **only** testimonials that a developer has added to `src/data/testimonials.mjs`. Feedback sent through the "Share your experience" form is emailed to `operations@neinsights.in` and is **never** published automatically. While the list is empty, the homepage shows an invitation instead of a carousel.
+The homepage "Traveller stories" section (and the `/feedback/` page) shows **only** testimonials that a developer has added to `src/data/testimonials.mjs`. Feedback sent through the "Share your experience" form is emailed to `operations@neinsights.in` and is **never** published automatically. While the list is empty, the homepage shows an invitation instead of a carousel.
 
 1. **Receive the feedback email.** Subject: `New traveller feedback from {Name} — {rating}/5`. (A `[Possible spam]` prefix means check it carefully first.)
 2. **Get NE Insights' approval** to feature this feedback.

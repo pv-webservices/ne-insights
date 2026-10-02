@@ -976,6 +976,12 @@ body.dialog-open{overflow:hidden}
 .feedback-form .form-actions .button{flex-basis:100%}
 .feedback-form .consent-field{margin-bottom:14px}
 .optional{font-weight:500;color:var(--muted)}
+/* Shareable /feedback/ page: the same form as a card, and approved stories as a grid */
+.feedback-sheet{padding:clamp(22px,3vw,36px);border:1px solid var(--line);border-top:5px solid var(--yellow);border-radius:22px;background:#fff;box-shadow:var(--shadow-md)}
+.feedback-sheet>h2{font-size:clamp(1.6rem,2.6vw,2.1rem);margin-bottom:8px}
+.feedback-sheet>.form-intro{margin-bottom:20px}
+.form-side .story-process{margin:20px 0 4px}
+.story-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;align-items:stretch}
 /* Without JavaScript (or <dialog> support) the form sits inline below the section */
 html:not(.js) .feedback-dialog,.no-dialog .feedback-dialog{position:static;display:block;width:auto;max-height:none;margin:0;padding:0 var(--gutter) clamp(64px,8vw,108px);border-radius:0;background:var(--cream);box-shadow:none;overflow:visible}
 html:not(.js) .feedback-dialog-inner,.no-dialog .feedback-dialog-inner{max-width:820px;margin-inline:auto;border-radius:24px;background:#fff;box-shadow:var(--shadow-md);overflow:visible}

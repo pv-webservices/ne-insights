@@ -84,14 +84,32 @@ const storiesView=stories=>{
   return `<div class="container">${sectionHead('TRAVELLER STORIES',TITLE,`${INTRO} Read experiences shared by our travellers — or tell us about yours.`)}<div class="stories-layout"><div class="stories-main">${stories.length>1?carousel:`<div class="story-single">${cards}</div>`}</div>${sharePanel('Travelled with NE Insights?',SHARE_TEXT)}</div></div>`;
 };
 
-const PROCESS=[['chat','You share your story','Tell us about your journey, in your own words.'],['shield','Our team reviews it','Every submission is read by the NE Insights team first.'],['heart','It may inspire others','With your permission, selected stories are featured here.']];
-const emptyView=()=>`<div class="container stories-empty"><div class="stories-intro">${sectionHead('TRAVELLER STORIES',TITLE,`${INTRO} Travelled with us? We’d love to hear yours.`)}<ol class="story-process">${PROCESS.map(([i,t,d],n)=>`<li data-reveal style="--d:${n}"><span class="story-process-icon">${icon(i)}</span><div><h3>${t}</h3><p>${d}</p></div></li>`).join('')}</ol></div>${sharePanel('Your journey could inspire the next one.',`Travelled with NE Insights? ${SHARE_TEXT}`)}</div>`;
+const PROCESS=[['chat','You share your story','Tell us about your journey, in your own words.'],['shield','Our team reviews it','Every submission is read by the NE Insights team first.'],['heart','It may inspire others','With your permission, selected stories are featured on our website.']];
+/** How feedback becomes a published story (homepage empty state and the /feedback/ page). */
+const processList=(reveal=true)=>`<ol class="story-process">${PROCESS.map(([i,t,d],n)=>`<li${reveal?` data-reveal style="--d:${n}"`:''}><span class="story-process-icon">${icon(i)}</span><div><h3>${t}</h3><p>${d}</p></div></li>`).join('')}</ol>`;
+const emptyView=()=>`<div class="container stories-empty"><div class="stories-intro">${sectionHead('TRAVELLER STORIES',TITLE,`${INTRO} Travelled with us? We’d love to hear yours.`)}${processList()}</div>${sharePanel('Your journey could inspire the next one.',`Travelled with NE Insights? ${SHARE_TEXT}`)}</div>`;
+
+const REQUIRED_NOTE='Fields marked <span aria-hidden="true">*</span><span class="sr-only">with an asterisk</span> are required.';
+const FORM_INTRO=`Tell us how your Northeast journey went. Your email address and phone number are only for our team and are never published. ${REQUIRED_NOTE}`;
 
 /**
  * The feedback form in a native <dialog>. Without JavaScript (or <dialog> support) CSS shows it inline
  * below the section and "Share Your Experience" is a plain link to it.
  */
-const feedbackDialog=()=>`<dialog class="feedback-dialog" id="${DIALOG_ID}" aria-labelledby="feedback-title" aria-describedby="feedback-intro" data-feedback-dialog><div class="feedback-dialog-inner"><div class="feedback-dialog-head"><div><p class="eyebrow">TRAVELLER STORIES</p><h2 id="feedback-title">Share your experience</h2></div><button type="button" class="dialog-close" data-feedback-close aria-label="Close feedback form"><span></span><span></span></button></div><div class="feedback-dialog-body"><p class="form-intro" id="feedback-intro">Tell us how your Northeast journey went. Your email address and phone number are only for our team and are never published. Fields marked <span aria-hidden="true">*</span><span class="sr-only">with an asterisk</span> are required.</p>${feedbackForm('feedback-title')}</div></div></dialog>`;
+const feedbackDialog=()=>`<dialog class="feedback-dialog" id="${DIALOG_ID}" aria-labelledby="feedback-title" aria-describedby="feedback-intro" data-feedback-dialog><div class="feedback-dialog-inner"><div class="feedback-dialog-head"><div><p class="eyebrow">TRAVELLER STORIES</p><h2 id="feedback-title">Share your experience</h2></div><button type="button" class="dialog-close" data-feedback-close aria-label="Close feedback form"><span></span><span></span></button></div><div class="feedback-dialog-body"><p class="form-intro" id="feedback-intro">${FORM_INTRO}</p>${feedbackForm('feedback-title')}</div></div></dialog>`;
+
+/**
+ * Body of the shareable /feedback/ page: the form inline (no dialog), how review works, and every
+ * approved testimonial below it. Without approved testimonials that last section is left out.
+ * @param {readonly unknown[]} [list]
+ */
+export const feedbackPageContent=(list=approved)=>{
+  const stories=checkTestimonials(list);
+  const form=`<div class="feedback-sheet"><p class="eyebrow">TRAVELLER STORIES</p><h2 id="feedback-page-title">Share your experience</h2><p class="form-intro">${FORM_INTRO}</p>${feedbackForm('feedback-page-title')}</div>`;
+  const side=`<aside class="form-side"><h2>How traveller stories work</h2><p>Every journey through the Northeast becomes a story of its own. Yours helps us improve and helps future travellers plan with confidence.</p>${processList(false)}</aside>`;
+  const grid=stories.length?`<section class="section stories-section" id="traveller-stories"><div class="container">${sectionHead('TRAVELLER STORIES',TITLE,'Experiences shared by travellers who explored the Northeast with us.')}<div class="story-grid">${stories.map(storyCard).join('')}</div></div></section>`:'';
+  return `<section class="section"><div class="container form-layout">${form}${side}</div></section>${grid}`;
+};
 
 /** @param {readonly unknown[]} [list] approved testimonials (tests pass fixtures; the site uses the data file) */
 export const travellerStories=(list=approved)=>{

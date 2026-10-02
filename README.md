@@ -6,7 +6,7 @@ Static, multi-page Northeast India travel website for **NE Insights Tours and Tr
 - **Hosting:** Netlify, auto-deployed from GitHub (`pv-webservices/ne-insights`, branch `main`).
 - **DNS:** GoDaddy (`ns65/ns66.domaincontrol.com`). **Email:** Zoho Mail, India data centre (`mx.zoho.in`), with SPF (`include:zoho.in`), DKIM (`zmail._domainkey`) and DMARC (`p=quarantine`) in place.
 - **Enquiries:** `POST /api/enquiry` (Netlify Function) → Zoho SMTP (`smtp.zoho.in:465`) → `operations@neinsights.in`. No third-party form service.
-- **Traveller feedback:** the homepage "Share your experience" form uses the same function (`form_type=feedback`) and mailbox. Nothing is published automatically. Approved testimonials are added by hand to `src/data/testimonials.mjs` (see `docs/CONTENT_UPDATES.md`). There is no testimonial database.
+- **Traveller feedback:** the shareable page `/feedback/` and the homepage "Share your experience" form use the same function (`form_type=feedback`) and mailbox. Nothing is published automatically. Approved testimonials are added by hand to `src/data/testimonials.mjs` (see `docs/CONTENT_UPDATES.md`). There is no testimonial database.
 
 ## Commands
 
