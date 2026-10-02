@@ -723,6 +723,10 @@ legend{margin-bottom:8px;font-size:13.5px;font-weight:700;color:var(--navy)}
  body{font-size:15.5px}
  .topbar-links{gap:14px;font-size:12px}
  .topbar-links a[href^="mailto"]{display:none}
+ /* Icon-only on phones; the label stays available to screen readers. */
+ .topbar-links a[href*="instagram.com"] span:not(.sr-only){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ .topbar-links a[href*="instagram.com"]{min-width:28px;justify-content:center}
+ .topbar-links a[href*="instagram.com"] .icon{width:18px;height:18px}
  .brand img{height:46px}
  .site-top.is-scrolled .brand img{height:42px}
  .hero{min-height:max(620px,100svh)}

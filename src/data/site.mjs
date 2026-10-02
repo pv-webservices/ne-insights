@@ -1,3 +1,6 @@
+// Clean profile URL (the QR share link's utm_source/stkn tracking parameters are not needed on a website).
+const instagram = 'https://www.instagram.com/neinsights.official/';
+
 export const site = {
   name: 'NE Insights',
   // Canonical domain for every page, sitemap and social card (deploy previews still point here and are noindex).
@@ -8,7 +11,10 @@ export const site = {
   whatsapp: '918473833199',
   address: '',
   hours: '',
-  socials: [],
+  instagram,
+  instagramHandle: '@neinsights.official',
+  // Feeds the Organization schema (sameAs).
+  socials: [instagram],
   // Add { name, jobTitle, image } once the client confirms it; this enables the founder (Person) schema.
   founder: null,
   legalApproved: false,
